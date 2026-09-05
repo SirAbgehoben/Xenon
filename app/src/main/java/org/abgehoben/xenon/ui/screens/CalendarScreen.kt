@@ -22,6 +22,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -30,12 +32,14 @@ import androidx.compose.ui.unit.sp
 import androidx.core.text.HtmlCompat
 import kotlinx.coroutines.launch
 import org.abgehoben.xenon.MainViewModel
+import org.abgehoben.xenon.R
 import org.abgehoben.xenon.data.ProcessedEvent
+import org.abgehoben.xenon.ui.components.SyncErrorState
+import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
-import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -55,7 +59,13 @@ fun CalendarScreen(viewModel: MainViewModel) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Kalender", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold) },
+                title = {
+                    Text(
+                        text = stringResource(R.string.calendar_title),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                },
                 scrollBehavior = scrollBehavior,
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface,
@@ -73,14 +83,10 @@ fun CalendarScreen(viewModel: MainViewModel) {
         ) {
             if (eventsByDay.isEmpty() && syncError != null && !isSyncing) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("Synchronisierung fehlgeschlagen", style = MaterialTheme.typography.titleMedium)
-                        Text(syncError!!, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center, modifier = Modifier.padding(16.dp))
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Button(onClick = { viewModel.refreshData() }) {
-                            Text("Erneut versuchen")
-                        }
-                    }
+                    SyncErrorState(
+                        error = syncError!!,
+                        onRetry = { viewModel.refreshData() }
+                    )
                 }
             } else {
                 LazyColumn(
@@ -123,7 +129,7 @@ fun CalendarScreen(viewModel: MainViewModel) {
                         item {
                             Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
                                 Text(
-                                    "Keine Termine für diesen Tag.",
+                                    text = stringResource(R.string.no_events_today),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                                 )
@@ -168,6 +174,12 @@ fun EventDetailsBottomSheet(
 ) {
     val accentColor = if (event.isHoliday) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary
 
+    // Observable locale from Compose configuration
+    val currentLocale = LocalConfiguration.current.locales[0]
+    val dateFormatter = remember(currentLocale) {
+        DateTimeFormatter.ofPattern("E | dd.MM.yy", currentLocale)
+    }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -181,22 +193,22 @@ fun EventDetailsBottomSheet(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             IconButton(onClick = onDismiss) {
-                Icon(Icons.Default.Close, contentDescription = "Schließen")
+                Icon(Icons.Default.Close, contentDescription = stringResource(R.string.cd_close))
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    text = event.startDate.format(DateTimeFormatter.ofPattern("E | dd.MM.yy", Locale.GERMAN)),
+                    text = event.startDate.format(dateFormatter),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    text = if (event.allDay) "Ganztägig" else "${event.startTime} - ${event.endTime}",
+                    text = if (event.allDay) stringResource(R.string.all_day) else "${event.startTime} - ${event.endTime}",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             IconButton(onClick = {}) {
-                Icon(Icons.Default.MoreVert, contentDescription = "Optionen")
+                Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.cd_options))
             }
         }
 
@@ -262,6 +274,8 @@ fun MonthSelector(
     currentMonth: YearMonth,
     onMonthChange: (YearMonth) -> Unit
 ) {
+    val currentLocale = LocalConfiguration.current.locales[0]
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -270,15 +284,15 @@ fun MonthSelector(
         verticalAlignment = Alignment.CenterVertically
     ) {
         IconButton(onClick = { onMonthChange(currentMonth.minusMonths(1)) }, modifier = Modifier.size(36.dp)) {
-            Icon(Icons.Default.ChevronLeft, contentDescription = "Voriger Monat")
+            Icon(Icons.Default.ChevronLeft, contentDescription = stringResource(R.string.cd_prev_month))
         }
         Text(
-            text = "${currentMonth.month.getDisplayName(TextStyle.FULL, Locale.GERMAN)} ${currentMonth.year}",
+            text = "${currentMonth.month.getDisplayName(TextStyle.FULL, currentLocale)} ${currentMonth.year}",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.ExtraBold
         )
         IconButton(onClick = { onMonthChange(currentMonth.plusMonths(1)) }, modifier = Modifier.size(36.dp)) {
-            Icon(Icons.Default.ChevronRight, contentDescription = "Nächster Monat")
+            Icon(Icons.Default.ChevronRight, contentDescription = stringResource(R.string.cd_next_month))
         }
     }
 }
@@ -292,7 +306,19 @@ fun CalendarGrid(
 ) {
     val daysInMonth = currentMonth.lengthOfMonth()
     val startPadding = currentMonth.atDay(1).dayOfWeek.value - 1
-    val dayNames = listOf("Mo", "Di", "Mi", "Do", "Fr", "Sa", "So")
+
+    val currentLocale = LocalConfiguration.current.locales[0]
+    val dayNames = remember(currentLocale) {
+        listOf(
+            DayOfWeek.MONDAY,
+            DayOfWeek.TUESDAY,
+            DayOfWeek.WEDNESDAY,
+            DayOfWeek.THURSDAY,
+            DayOfWeek.FRIDAY,
+            DayOfWeek.SATURDAY,
+            DayOfWeek.SUNDAY
+        ).map { it.getDisplayName(TextStyle.SHORT, currentLocale) }
+    }
 
     Column(modifier = Modifier.padding(horizontal = 12.dp)) {
         Row(modifier = Modifier.fillMaxWidth()) {
@@ -400,7 +426,7 @@ fun EventListItem(event: ProcessedEvent, onClick: () -> Unit) {
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
-                        text = if (event.allDay) "Ganztägig" else event.startTime,
+                        text = if (event.allDay) stringResource(R.string.all_day) else event.startTime,
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

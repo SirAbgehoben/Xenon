@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Xenon</string>
+    <string name="nav_timetable">Plan</string>
+    <string name="nav_calendar">Kalender</string>
+    <string name="nav_settings">Optionen</string>
+    <string name="calendar_week_format">KW %1$s (%2$s)</string>
+    <string name="cd_prev_week">Vorige Woche</string>
+    <string name="cd_next_week">Nächste Woche</string>
+    <string name="cd_week_view">Wochenansicht</string>
+    <string name="cd_day_view">Tagesansicht</string>
+    <string name="period_abbr">Std.</string>
+    <string name="periods_count">%1$d Std.</string>
+    <string name="free_period">Freistunde</string>
+    <string name="no_lessons_today">Kein Unterricht an diesem Tag.</string>
+    <string name="full_day_no_school">Ganztägig unterrichtsfrei</string>
+    <string name="daily_announcements">Mitteilungen zum Tag</string>
+    <string name="cancelled_prefix">[X] %1$s</string>
+    <string name="cancelled_substitution_title">[X] %1$s → %2$s</string>
+    <string name="regular_course_label">Reguläres Fach: %1$s</string>
+    <string name="substitution_title">Vertretung</string>
+    <string name="lesson_cancelled">Stunde entfällt</string>
+    <string name="replacement_prefix">Ersatz: %1$s</string>
+    <string name="room_change_format">Raumwechsel: %1$s → %2$s</string>
+    <string name="cd_close">Schließen</string>
+    <string name="cd_options">Optionen</string>
+    <string name="calendar_title">Kalender</string>
+    <string name="cd_prev_month">Voriger Monat</string>
+    <string name="cd_next_month">Nächster Monat</string>
+    <string name="no_events_today">Keine Termine für diesen Tag.</string>
+    <string name="all_day">Ganztägig</string>
+    <string name="login_welcome_back">Willkommen zurück</string>
+    <string name="login_description">Melde dich bei Schulmanager Online an, um deinen Plan zu sehen.</string>
+    <string name="login_username_label">Nutzername / E-Mail</string>
+    <string name="login_password_label">Passwort</string>
+    <string name="login_button">Anmelden</string>
+    <string name="settings_title">Einstellungen</string>
+    <string name="settings_logout">Abmelden</string>
+    <string name="sync_failed">Synchronisierung fehlgeschlagen</string>
+    <string name="retry">Erneut versuchen</string>
+</resources>

@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -22,6 +23,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -35,10 +38,10 @@ import org.abgehoben.xenon.ui.screens.SettingsScreen
 import org.abgehoben.xenon.ui.screens.timetable.TimetableScreen
 import org.abgehoben.xenon.ui.theme.XenonTheme
 
-sealed class Screen(val route: String, val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
-    object Timetable : Screen("timetable", "Plan", Icons.AutoMirrored.Filled.List)
-    object Calendar : Screen("calendar", "Kalender", Icons.Default.CalendarMonth)
-    object Settings : Screen("settings", "Optionen", Icons.Default.Settings)
+sealed class Screen(val route: String, @StringRes val labelRes: Int, val icon: ImageVector) {
+    object Timetable : Screen("timetable", R.string.nav_timetable, Icons.AutoMirrored.Filled.List)
+    object Calendar : Screen("calendar", R.string.nav_calendar, Icons.Default.CalendarMonth)
+    object Settings : Screen("settings", R.string.nav_settings, Icons.Default.Settings)
 }
 
 class MainActivity : ComponentActivity() {
@@ -99,7 +102,7 @@ fun MainAppContent(viewModel: MainViewModel) {
                 items.forEach { screen ->
                     NavigationBarItem(
                         icon = { Icon(screen.icon, contentDescription = null) },
-                        label = { Text(screen.label) },
+                        label = { Text(stringResource(screen.labelRes)) },
                         selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
                         onClick = {
                             navController.navigate(screen.route) {

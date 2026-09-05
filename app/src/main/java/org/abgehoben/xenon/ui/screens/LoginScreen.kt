@@ -6,8 +6,10 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import org.abgehoben.xenon.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -15,14 +17,13 @@ fun LoginScreen(
     error: String?,
     onLogin: (String, String) -> Unit
 ) {
-    // Preserve input values across failed login attempts
     var username by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
 
     Scaffold(
         topBar = {
             LargeTopAppBar(
-                title = { Text("Willkommen zurück") }
+                title = { Text(stringResource(R.string.login_welcome_back)) }
             )
         }
     ) { innerPadding ->
@@ -34,7 +35,7 @@ fun LoginScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                "Melde dich bei Schulmanager Online an, um deinen Plan zu sehen.",
+                text = stringResource(R.string.login_description),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -44,7 +45,7 @@ fun LoginScreen(
             OutlinedTextField(
                 value = username,
                 onValueChange = { username = it },
-                label = { Text("Nutzername / E-Mail") },
+                label = { Text(stringResource(R.string.login_username_label)) },
                 modifier = Modifier.fillMaxWidth(),
                 shape = MaterialTheme.shapes.large,
                 singleLine = true
@@ -54,7 +55,7 @@ fun LoginScreen(
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
-                label = { Text("Passwort") },
+                label = { Text(stringResource(R.string.login_password_label)) },
                 visualTransformation = PasswordVisualTransformation(),
                 modifier = Modifier.fillMaxWidth(),
                 shape = MaterialTheme.shapes.large,
@@ -84,7 +85,7 @@ fun LoginScreen(
                     .height(56.dp),
                 shape = MaterialTheme.shapes.large
             ) {
-                Text("Anmelden", style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.login_button), style = MaterialTheme.typography.titleMedium)
             }
 
             Spacer(modifier = Modifier.height(16.dp))

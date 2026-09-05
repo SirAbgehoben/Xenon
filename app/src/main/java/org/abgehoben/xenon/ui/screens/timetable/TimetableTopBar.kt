@@ -18,8 +18,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import org.abgehoben.xenon.R
 
 @Composable
 fun TimetableTopBar(
@@ -56,11 +58,15 @@ fun TimetableTopBar(
                         onClick = onPrevWeek,
                         modifier = Modifier.size(32.dp)
                     ) {
-                        Icon(Icons.Default.ChevronLeft, contentDescription = "Vorige Woche", modifier = Modifier.size(18.dp))
+                        Icon(
+                            Icons.Default.ChevronLeft,
+                            contentDescription = stringResource(R.string.cd_prev_week),
+                            modifier = Modifier.size(18.dp)
+                        )
                     }
 
                     Text(
-                        text = "KW $calWeek ($weekType)",
+                        text = stringResource(R.string.calendar_week_format, calWeek, weekType),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Black,
                         modifier = Modifier.padding(horizontal = 8.dp),
@@ -71,7 +77,11 @@ fun TimetableTopBar(
                         onClick = onNextWeek,
                         modifier = Modifier.size(32.dp)
                     ) {
-                        Icon(Icons.Default.ChevronRight, contentDescription = "Nächste Woche", modifier = Modifier.size(18.dp))
+                        Icon(
+                            Icons.Default.ChevronRight,
+                            contentDescription = stringResource(R.string.cd_next_week),
+                            modifier = Modifier.size(18.dp)
+                        )
                     }
                 }
             }
@@ -98,7 +108,12 @@ fun TimetableTopBar(
                             .clickable { if (!isWeeklyView) onToggleViewMode() },
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Default.GridView, contentDescription = "Wochenansicht", tint = gridIconColor, modifier = Modifier.size(17.dp))
+                        Icon(
+                            Icons.Default.GridView,
+                            contentDescription = stringResource(R.string.cd_week_view),
+                            tint = gridIconColor,
+                            modifier = Modifier.size(17.dp)
+                        )
                     }
 
                     Box(
@@ -109,7 +124,12 @@ fun TimetableTopBar(
                             .clickable { if (isWeeklyView) onToggleViewMode() },
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.AutoMirrored.Filled.ViewList, contentDescription = "Tagesansicht", tint = listIconColor, modifier = Modifier.size(17.dp))
+                        Icon(
+                            Icons.AutoMirrored.Filled.ViewList,
+                            contentDescription = stringResource(R.string.cd_day_view),
+                            tint = listIconColor,
+                            modifier = Modifier.size(17.dp)
+                        )
                     }
                 }
             }

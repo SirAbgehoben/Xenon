@@ -15,21 +15,26 @@ import androidx.compose.material.icons.filled.EventBusy
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import org.abgehoben.xenon.R
 import org.abgehoben.xenon.data.ClassHour
 import org.abgehoben.xenon.data.MergedSlot
 import org.abgehoben.xenon.data.TimetableGrid
 import org.abgehoben.xenon.data.TimetableSlot
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.time.format.TextStyle
 
 @Composable
 fun DailyListView(
@@ -39,8 +44,13 @@ fun DailyListView(
     onTabSelected: (Int) -> Unit,
     onSlotClick: (Int, MergedSlot, TimetableSlot) -> Unit
 ) {
-    val dayNames = listOf("Mo", "Di", "Mi", "Do", "Fr")
     val classHours = grid.classHours
+
+    // Observable locale from Compose configuration
+    val currentLocale = LocalConfiguration.current.locales[0]
+    val dFormatter = remember(currentLocale) {
+        DateTimeFormatter.ofPattern("dd.MM.", currentLocale)
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
         PrimaryTabRow(
@@ -48,8 +58,9 @@ fun DailyListView(
             containerColor = MaterialTheme.colorScheme.surface,
             divider = {}
         ) {
-            dayNames.forEachIndexed { index, name ->
+            for (index in 0..4) {
                 val date = monday.plusDays(index.toLong())
+                val name = date.dayOfWeek.getDisplayName(TextStyle.SHORT, currentLocale)
                 Tab(
                     selected = pagerState.currentPage == index,
                     onClick = { onTabSelected(index) },
@@ -61,7 +72,7 @@ fun DailyListView(
                                 fontWeight = if (pagerState.currentPage == index) FontWeight.Black else FontWeight.Medium
                             )
                             Text(
-                                date.format(DateTimeFormatter.ofPattern("dd.MM.")),
+                                text = date.format(dFormatter),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -124,7 +135,7 @@ fun DailyListView(
                                 )
                                 Spacer(modifier = Modifier.height(6.dp))
                                 Text(
-                                    text = "Ganztägig unterrichtsfrei",
+                                    text = stringResource(R.string.full_day_no_school),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = if (first.isHoliday) MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f)
                                 )
@@ -139,7 +150,7 @@ fun DailyListView(
                             color = MaterialTheme.colorScheme.surfaceContainerHigh
                         ) {
                             Text(
-                                text = "Kein Unterricht an diesem Tag.",
+                                text = stringResource(R.string.no_lessons_today),
                                 style = MaterialTheme.typography.bodyMedium,
                                 textAlign = TextAlign.Center,
                                 modifier = Modifier.fillMaxWidth().padding(24.dp),
@@ -164,7 +175,7 @@ fun DailyListView(
                             Icon(Icons.Default.Info, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                "Mitteilungen zum Tag",
+                                text = stringResource(R.string.daily_announcements),
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
@@ -264,7 +275,7 @@ fun CompactLessonCard(
                 if (slot != null) {
                     if (slot.cancelled) {
                         Text(
-                            text = "[X] ${slot.course}",
+                            text = stringResource(R.string.cancelled_prefix, slot.course),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.error,
                             fontWeight = FontWeight.Bold
@@ -290,7 +301,11 @@ fun CompactLessonCard(
                         )
                     }
                 } else {
-                    Text("Freistunde", style = MaterialTheme.typography.labelMedium, color = colorPair.second.copy(alpha = 0.5f))
+                    Text(
+                        text = stringResource(R.string.free_period),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = colorPair.second.copy(alpha = 0.5f)
+                    )
                 }
             }
 

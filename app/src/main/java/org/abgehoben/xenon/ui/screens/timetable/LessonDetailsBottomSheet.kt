@@ -9,17 +9,20 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import org.abgehoben.xenon.R
 import org.abgehoben.xenon.data.ClassHour
 import org.abgehoben.xenon.data.MergedSlot
 import org.abgehoben.xenon.data.TimetableSlot
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 private const val TAG = "LessonDetailsBottomSheet"
 
@@ -36,6 +39,11 @@ fun LessonDetailsBottomSheet(
     val (_, endTime) = getTimeRangeForHour(mergedSlot.endHour, classHours)
     val combinedTime = if (startTime.isNotEmpty() && endTime.isNotEmpty()) "$startTime - $endTime" else ""
     val slotDate = mondayDate.plusDays(dayIndex.toLong() - 1)
+
+    val currentLocale = LocalConfiguration.current.locales[0]
+    val dateFormatter = remember(currentLocale) {
+        DateTimeFormatter.ofPattern("E | dd.MM.yy", currentLocale)
+    }
 
     val accentColor = when {
         slot.isHoliday -> MaterialTheme.colorScheme.tertiary
@@ -57,11 +65,11 @@ fun LessonDetailsBottomSheet(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             IconButton(onClick = onDismiss) {
-                Icon(Icons.Default.Close, contentDescription = "Schließen")
+                Icon(Icons.Default.Close, contentDescription = stringResource(R.string.cd_close))
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    text = slotDate.format(DateTimeFormatter.ofPattern("E | dd.MM.yy", Locale.GERMAN)),
+                    text = slotDate.format(dateFormatter),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -76,7 +84,7 @@ fun LessonDetailsBottomSheet(
             IconButton(onClick = { //TODO
                 Log.e(TAG, "TODO: implement 3 dot button handling")
             }) {
-                Icon(Icons.Default.MoreVert, contentDescription = "Optionen")
+                Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.cd_options))
             }
         }
 
@@ -91,8 +99,8 @@ fun LessonDetailsBottomSheet(
 
         Column(modifier = Modifier.padding(horizontal = 24.dp)) {
             val titleText = when {
-                slot.cancelled && slot.substitution != null -> "[X] ${slot.course} -> ${slot.substitution}"
-                slot.cancelled -> "[X] ${slot.course}"
+                slot.cancelled && slot.substitution != null -> stringResource(R.string.cancelled_substitution_title, slot.course, slot.substitution)
+                slot.cancelled -> stringResource(R.string.cancelled_prefix, slot.course)
                 slot.substitution != null -> slot.substitution
                 else -> slot.course
             }
@@ -105,7 +113,7 @@ fun LessonDetailsBottomSheet(
 
             if (slot.substitution != null && !slot.cancelled) {
                 Text(
-                    text = "Reguläres Fach: ${slot.course}",
+                    text = stringResource(R.string.regular_course_label, slot.course),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -146,21 +154,21 @@ fun LessonDetailsBottomSheet(
                     Column {
                         val isReplacement = slot.substitution != null || slot.newRoom != null || slot.subRoom != null
                         Text(
-                            text = if (isReplacement) "Vertretung" else "Stunde entfällt",
+                            text = stringResource(if (isReplacement) R.string.substitution_title else R.string.lesson_cancelled),
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.Bold,
                             color = accentColor
                         )
                         if (slot.substitution != null && slot.cancelled) {
                             Text(
-                                text = "Ersatz: ${slot.substitution}",
+                                text = stringResource(R.string.replacement_prefix, slot.substitution),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.SemiBold
                             )
                         }
                         if (slot.subRoom != null || slot.newRoom != null) {
                             Text(
-                                text = "Raumwechsel: ${slot.room} -> ${slot.subRoom ?: slot.newRoom}",
+                                text = stringResource(R.string.room_change_format, slot.room, slot.subRoom ?: slot.newRoom ?: ""),
                                 style = MaterialTheme.typography.bodyMedium
                             )
                         }

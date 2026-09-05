@@ -7,8 +7,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import org.abgehoben.xenon.R
 
 @Composable
 fun SyncErrorState(error: String, onRetry: () -> Unit) {
@@ -16,7 +18,7 @@ fun SyncErrorState(error: String, onRetry: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.padding(32.dp)
     ) {
-        Text("Synchronisierung fehlgeschlagen", style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(R.string.sync_failed), style = MaterialTheme.typography.titleMedium)
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = error,
@@ -26,7 +28,7 @@ fun SyncErrorState(error: String, onRetry: () -> Unit) {
         )
         Spacer(modifier = Modifier.height(24.dp))
         Button(onClick = onRetry, shape = MaterialTheme.shapes.medium) {
-            Text("Erneut versuchen")
+            Text(stringResource(R.string.retry))
         }
     }
 }

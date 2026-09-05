@@ -8,20 +8,25 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import org.abgehoben.xenon.R
 import org.abgehoben.xenon.data.MergedSlot
 import org.abgehoben.xenon.data.TimetableGrid
 import org.abgehoben.xenon.data.TimetableSlot
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.time.format.TextStyle
 
 @Composable
 fun UntisWeeklyGrid(
@@ -31,8 +36,10 @@ fun UntisWeeklyGrid(
     val hScrollState = rememberScrollState()
     val vScrollState = rememberScrollState()
 
-    val dayNames = listOf("Mo", "Di", "Mi", "Do", "Fr")
-    val dFormatter = DateTimeFormatter.ofPattern("dd.MM.")
+    val currentLocale = LocalConfiguration.current.locales[0]
+    val dFormatter = remember(currentLocale) {
+        DateTimeFormatter.ofPattern("dd.MM.", currentLocale)
+    }
 
     val colWidth = 104.dp
     val timeColWidth = 50.dp
@@ -55,7 +62,7 @@ fun UntisWeeklyGrid(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        "Std.",
+                        text = stringResource(R.string.period_abbr),
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Black,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -71,6 +78,7 @@ fun UntisWeeklyGrid(
                     for (i in 0..4) {
                         val date = grid.mondayDate.plusDays(i.toLong())
                         val isToday = date == LocalDate.now()
+                        val dayName = date.dayOfWeek.getDisplayName(TextStyle.SHORT, currentLocale)
 
                         Box(
                             modifier = Modifier.width(colWidth),
@@ -86,7 +94,7 @@ fun UntisWeeklyGrid(
                                     horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
                                     Text(
-                                        text = dayNames[i],
+                                        text = dayName,
                                         style = MaterialTheme.typography.labelMedium,
                                         fontWeight = FontWeight.ExtraBold,
                                         color = if (isToday) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
@@ -287,7 +295,7 @@ fun UntisGridCell(slot: TimetableSlot, span: Int = 1) {
                         Column(modifier = Modifier.weight(1f)) {
                             if (slot.cancelled) {
                                 Text(
-                                    text = "[X] ${slot.course}",
+                                    text = stringResource(R.string.cancelled_prefix, slot.course),
                                     style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.5.sp, fontWeight = FontWeight.Bold),
                                     color = MaterialTheme.colorScheme.error,
                                     maxLines = 1,
@@ -342,7 +350,7 @@ fun UntisGridCell(slot: TimetableSlot, span: Int = 1) {
 
                             if (span >= 2) {
                                 Text(
-                                    text = "$span Std.",
+                                    text = stringResource(R.string.periods_count, span),
                                     style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.5.sp, fontWeight = FontWeight.Bold),
                                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                                 )
