@@ -9,6 +9,7 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -32,9 +33,10 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import org.abgehoben.xenon.data.ThemeMode
 import org.abgehoben.xenon.ui.screens.LoginScreen
-import org.abgehoben.xenon.ui.screens.SettingsScreen
 import org.abgehoben.xenon.ui.screens.calendar.CalendarScreen
+import org.abgehoben.xenon.ui.screens.settings.SettingsScreen
 import org.abgehoben.xenon.ui.screens.timetable.TimetableScreen
 import org.abgehoben.xenon.ui.theme.XenonTheme
 
@@ -50,10 +52,21 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            XenonTheme {
-                val viewModel: MainViewModel = viewModel()
-                val appState by viewModel.appState.collectAsState()
+            val viewModel: MainViewModel = viewModel()
+            val appState by viewModel.appState.collectAsState()
+            val userSettings by viewModel.userSettings.collectAsState()
 
+            // Calculate active theme mode dynamically from DataStore settings
+            val isDark = when (userSettings.themeMode) {
+                ThemeMode.SYSTEM -> isSystemInDarkTheme()
+                ThemeMode.LIGHT -> false
+                ThemeMode.DARK -> true
+            }
+
+            XenonTheme(
+                darkTheme = isDark,
+                dynamicColor = userSettings.dynamicColor
+            ) {
                 AnimatedContent(
                     targetState = appState,
                     transitionSpec = { fadeIn() togetherWith fadeOut() },
@@ -119,7 +132,7 @@ fun MainAppContent(viewModel: MainViewModel) {
         }
     ) { innerPadding ->
         NavHost(
-            navController,
+            navController = navController,
             startDestination = Screen.Timetable.route,
             // Only pad for the bottom navigation bar
             modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding())

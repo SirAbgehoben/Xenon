@@ -9,9 +9,11 @@ import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.withTimeout
@@ -37,8 +39,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private val sessionManager = SessionManager(application)
+    private val settingsManager = SettingsManager(application)
     private val api = SchulmanagerApi(sessionManager)
     private val repository = TimetableRepository(api)
+
+    // User settings state stream from DataStore
+    val userSettings: StateFlow<UserSettings> = settingsManager.userSettings
+        .stateIn(viewModelScope, SharingStarted.Eagerly, UserSettings())
 
     private val _appState = MutableStateFlow<AppState>(AppState.Loading)
     val appState: StateFlow<AppState> = _appState
@@ -73,9 +80,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     init {
-        val today = LocalDate.now().dayOfWeek
-        if (today == DayOfWeek.SATURDAY || today == DayOfWeek.SUNDAY) {
-            _weekOffset.value = 1
+        viewModelScope.launch(coroutineExceptionHandler) {
+            val settings = settingsManager.userSettings.firstOrNull() ?: UserSettings()
+            _isWeeklyView.value = settings.defaultViewWeekly
+
+            val today = LocalDate.now().dayOfWeek
+            if (settings.weekendAdvance && (today == DayOfWeek.SATURDAY || today == DayOfWeek.SUNDAY)) {
+                _weekOffset.value = 1
+            }
         }
         checkSession()
     }
@@ -207,12 +219,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     _appState.value = AppState.Authenticated(token)
                 }
 
-                launch {
-                    try {
-                        val baseMonday = LocalDate.now().minusDays(LocalDate.now().dayOfWeek.value.toLong() - 1)
-                        repository.getFullTimetable(token, baseMonday.plusWeeks(1), false)
-                        repository.getFullTimetable(token, baseMonday.minusWeeks(1), false)
-                    } catch (_: Throwable) {}
+                // Background adjacent preloading (completely non-blocking)
+                if (userSettings.value.preloadWeeks) {
+                    launch {
+                        try {
+                            val baseMonday = LocalDate.now().minusDays(LocalDate.now().dayOfWeek.value.toLong() - 1)
+                            repository.getFullTimetable(token, baseMonday.plusWeeks(1), false)
+                            repository.getFullTimetable(token, baseMonday.minusWeeks(1), false)
+                        } catch (_: Throwable) {}
+                    }
                 }
             } catch (e: Throwable) {
                 if (e !is CancellationException) {
@@ -258,5 +273,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             else ->
                 app.getString(R.string.error_network_generic)
         }
+    }
+
+    // Settings actions
+    fun setThemeMode(mode: ThemeMode) = viewModelScope.launch { settingsManager.setThemeMode(mode) }
+    fun setDynamicColor(enabled: Boolean) = viewModelScope.launch { settingsManager.setDynamicColor(enabled) }
+    fun setDefaultViewWeekly(enabled: Boolean) = viewModelScope.launch { settingsManager.setDefaultViewWeekly(enabled) }
+    fun setMergeLessons(enabled: Boolean) = viewModelScope.launch { settingsManager.setMergeLessons(enabled) }
+    fun setWeekendAdvance(enabled: Boolean) = viewModelScope.launch { settingsManager.setWeekendAdvance(enabled) }
+    fun setShowHolidays(enabled: Boolean) = viewModelScope.launch { settingsManager.setShowHolidays(enabled) }
+    fun setScaleBreaks(enabled: Boolean) = viewModelScope.launch { settingsManager.setScaleBreaks(enabled) }
+    fun setPreloadWeeks(enabled: Boolean) = viewModelScope.launch { settingsManager.setPreloadWeeks(enabled) }
+
+    fun clearAppCache() {
+        _timetableGrid.value = null
+        _calendarEvents.value = emptyMap()
+        refreshData(forceRefresh = true)
+    }
+
+    fun simulateNetworkError() {
+        _syncError.value = getApplication<Application>().getString(R.string.error_no_internet)
     }
 }
