@@ -12,7 +12,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import org.abgehoben.xenon.MainViewModel
@@ -41,20 +40,23 @@ fun CalendarScreen(viewModel: MainViewModel) {
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = stringResource(R.string.calendar_title),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Black
-                    )
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    titleContentColor = MaterialTheme.colorScheme.onSurface
-                ),
-                modifier = Modifier.statusBarsPadding()
-            )
+            Surface(
+                color = MaterialTheme.colorScheme.surface,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+            ) {
+                MonthSelector(
+                    currentMonth = currentMonth,
+                    onMonthChange = { newMonth ->
+                        currentMonth = newMonth
+                        if (selectedDate.year != newMonth.year || selectedDate.month != newMonth.month) {
+                            val clampedDay = selectedDate.dayOfMonth.coerceAtMost(newMonth.lengthOfMonth())
+                            selectedDate = newMonth.atDay(clampedDay)
+                        }
+                    }
+                )
+            }
         }
     ) { innerPadding ->
         PullToRefreshBox(
@@ -81,19 +83,6 @@ fun CalendarScreen(viewModel: MainViewModel) {
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(bottom = 32.dp)
                 ) {
-                    item {
-                        MonthSelector(
-                            currentMonth = currentMonth,
-                            onMonthChange = { newMonth ->
-                                currentMonth = newMonth
-                                if (selectedDate.year != newMonth.year || selectedDate.month != newMonth.month) {
-                                    val clampedDay = selectedDate.dayOfMonth.coerceAtMost(newMonth.lengthOfMonth())
-                                    selectedDate = newMonth.atDay(clampedDay)
-                                }
-                            }
-                        )
-                    }
-
                     item {
                         CalendarGrid(
                             currentMonth = currentMonth,
