@@ -5,15 +5,24 @@ import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.supervisorScope
+import kotlinx.coroutines.withTimeout
 import org.abgehoben.xenon.data.*
+import java.io.IOException
+import java.net.ConnectException
+import java.net.SocketTimeoutException
+import java.net.UnknownHostException
 import java.time.DayOfWeek
 import java.time.LocalDate
+import kotlin.time.Duration.Companion.milliseconds
 
 sealed class AppState {
     object Loading : AppState()
@@ -58,6 +67,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private var currentSyncJob: Job? = null
     private var currentNavJob: Job? = null
 
+    private val coroutineExceptionHandler = CoroutineExceptionHandler { _, throwable ->
+        Log.e(TAG, "Uncaught coroutine exception: ${throwable.message}", throwable)
+        handleSyncError(throwable)
+    }
+
     init {
         val today = LocalDate.now().dayOfWeek
         if (today == DayOfWeek.SATURDAY || today == DayOfWeek.SUNDAY) {
@@ -67,7 +81,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun checkSession() {
-        viewModelScope.launch {
+        viewModelScope.launch(coroutineExceptionHandler) {
             sessionManager.jwtToken.collectLatest { token ->
                 if (token != null) {
                     _appState.value = AppState.Authenticated(token)
@@ -80,23 +94,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun login(username: String, password: String) {
-        viewModelScope.launch {
+        viewModelScope.launch(coroutineExceptionHandler) {
             _appState.value = AppState.Loading
             try {
                 val response = api.login(username, password)
                 if (response.jwt != null) {
                     sessionManager.saveJwtToken(response.jwt)
                 } else {
-                    _appState.value = AppState.Error("Login failed")
+                    _appState.value = AppState.Error(getApplication<Application>().getString(R.string.error_login_failed))
                 }
             } catch (e: Exception) {
-                _appState.value = AppState.Error(e.message ?: "Login failed")
+                if (e !is CancellationException) {
+                    _appState.value = AppState.Error(formatErrorMessage(e))
+                }
             }
         }
     }
 
     fun logout() {
-        viewModelScope.launch {
+        viewModelScope.launch(coroutineExceptionHandler) {
             sessionManager.clearSession()
             _timetableGrid.value = null
             _calendarEvents.value = emptyMap()
@@ -105,13 +121,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun refreshData(forceRefresh: Boolean = true) {
-        val state = _appState.value
-        if (state is AppState.Authenticated) {
-            if (forceRefresh) {
+        viewModelScope.launch(coroutineExceptionHandler) {
+            val token = (appState.value as? AppState.Authenticated)?.token
+                ?: sessionManager.jwtToken.firstOrNull()
+
+            if (token != null) {
+                _appState.value = AppState.Authenticated(token)
                 _isRefreshing.value = true
-                startTieredSync(state.token, forceRefresh = true)
+                _syncError.value = null
+                startTieredSync(token, forceRefresh = forceRefresh)
             } else {
-                refreshCurrentState(false)
+                _appState.value = AppState.LoginRequired
             }
         }
     }
@@ -133,17 +153,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private fun refreshCurrentState(forceRefresh: Boolean) {
         val state = _appState.value
         if (state is AppState.Authenticated) {
-            // FIX: Cancel any in-flight navigation request so it cannot overwrite the active week later
             currentNavJob?.cancel()
-            currentNavJob = viewModelScope.launch {
+            currentNavJob = viewModelScope.launch(coroutineExceptionHandler) {
                 _isSyncing.value = true
                 _syncError.value = null
                 try {
-                    val baseMonday = LocalDate.now().minusDays(LocalDate.now().dayOfWeek.value.toLong() - 1)
-                    val targetMonday = baseMonday.plusWeeks(_weekOffset.value.toLong())
-                    val grid = repository.getFullTimetable(state.token, targetMonday, forceRefresh)
-                    _timetableGrid.value = grid
-                } catch (e: Exception) {
+                    withTimeout(15_000L.milliseconds) {
+                        val baseMonday = LocalDate.now().minusDays(LocalDate.now().dayOfWeek.value.toLong() - 1)
+                        val targetMonday = baseMonday.plusWeeks(_weekOffset.value.toLong())
+                        val grid = repository.getFullTimetable(state.token, targetMonday, forceRefresh)
+                        _timetableGrid.value = grid
+                    }
+                } catch (e: Throwable) {
                     if (e !is CancellationException) {
                         handleSyncError(e)
                     }
@@ -159,30 +180,41 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun startTieredSync(token: String, forceRefresh: Boolean = false) {
         currentSyncJob?.cancel()
         currentNavJob?.cancel()
-        currentSyncJob = viewModelScope.launch {
+        currentSyncJob = viewModelScope.launch(coroutineExceptionHandler) {
             _isSyncing.value = true
             _syncError.value = null
             try {
-                val baseMonday = LocalDate.now().minusDays(LocalDate.now().dayOfWeek.value.toLong() - 1)
-                val currentTargetMonday = baseMonday.plusWeeks(_weekOffset.value.toLong())
+                withTimeout(20_000L.milliseconds) {
+                    val baseMonday = LocalDate.now().minusDays(LocalDate.now().dayOfWeek.value.toLong() - 1)
+                    val currentTargetMonday = baseMonday.plusWeeks(_weekOffset.value.toLong())
 
-                val calendarDeferred = async { repository.getCalendarEvents(token) }
-                val currentGrid = repository.getFullTimetable(token, currentTargetMonday, forceRefresh)
+                    supervisorScope {
+                        val calendarDeferred = async {
+                            runCatching { repository.getCalendarEvents(token, forceRefresh) }.getOrNull()
+                        }
 
-                _timetableGrid.value = currentGrid
-                _calendarEvents.value = calendarDeferred.await()
+                        val grid = repository.getFullTimetable(token, currentTargetMonday, forceRefresh)
+                        val calendarEvents = calendarDeferred.await()
 
-                _appState.value = AppState.Authenticated(token)
-                _isSyncing.value = false
+                        _timetableGrid.value = grid
 
-                // Preload immediately adjacent weeks gently without flooding the API with 9 requests
+                        // CRITICAL: Only update calendarEvents if non-null; never wipe existing data with emptyMap on failure
+                        if (calendarEvents != null) {
+                            _calendarEvents.value = calendarEvents
+                        }
+                    }
+
+                    _appState.value = AppState.Authenticated(token)
+                }
+
                 launch {
                     try {
+                        val baseMonday = LocalDate.now().minusDays(LocalDate.now().dayOfWeek.value.toLong() - 1)
                         repository.getFullTimetable(token, baseMonday.plusWeeks(1), false)
                         repository.getFullTimetable(token, baseMonday.minusWeeks(1), false)
-                    } catch (_: Exception) {}
+                    } catch (_: Throwable) {}
                 }
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 if (e !is CancellationException) {
                     handleSyncError(e)
                 }
@@ -193,15 +225,38 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private fun handleSyncError(e: Exception) {
-        Log.e(TAG, "Sync failed: ${e.message}")
-        if (e.message?.contains("401") == true || e.message?.contains("Session expired") == true) {
-            viewModelScope.launch {
+    private fun handleSyncError(e: Throwable) {
+        Log.e(TAG, "Sync failed: ${e.message}", e)
+        val msg = e.message ?: ""
+        if (msg.contains("401") || msg.contains("Session expired")) {
+            viewModelScope.launch(coroutineExceptionHandler) {
                 sessionManager.clearSession()
                 _appState.value = AppState.LoginRequired
             }
         } else {
-            _syncError.value = e.message
+            _syncError.value = formatErrorMessage(e)
+        }
+    }
+
+    private fun formatErrorMessage(e: Throwable): String {
+        val app = getApplication<Application>()
+        val msg = e.message ?: ""
+
+        return when {
+            msg.contains("401") || msg.contains("Session expired") ->
+                app.getString(R.string.error_session_expired)
+            msg.contains("429") || msg.contains("Rate limit") ->
+                app.getString(R.string.error_rate_limited)
+            e is UnknownHostException || e.cause is UnknownHostException ->
+                app.getString(R.string.error_no_internet)
+            e is ConnectException || e.cause is ConnectException ->
+                app.getString(R.string.error_server_unreachable)
+            e is SocketTimeoutException || e.cause is SocketTimeoutException ->
+                app.getString(R.string.error_timeout)
+            e.localizedMessage != null && e.localizedMessage!!.isNotEmpty() ->
+                e.localizedMessage!!
+            else ->
+                app.getString(R.string.error_network_generic)
         }
     }
 }

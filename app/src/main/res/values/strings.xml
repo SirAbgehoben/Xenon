@@ -37,4 +37,11 @@
     <string name="settings_logout">Log out</string>
     <string name="sync_failed">Synchronization failed</string>
     <string name="retry">Retry</string>
+    <string name="error_no_internet">No internet connection. Please check your network.</string>
+    <string name="error_server_unreachable">Server unreachable. Please try again later.</string>
+    <string name="error_timeout">Connection timed out. Please try again.</string>
+    <string name="error_rate_limited">Too many requests. Please wait a moment.</string>
+    <string name="error_session_expired">Session expired. Please sign in again.</string>
+    <string name="error_login_failed">Login failed. Please check your credentials.</string>
+    <string name="error_network_generic">A network error occurred.</string>
 </resources>

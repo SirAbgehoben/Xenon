@@ -11,9 +11,16 @@ import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.*
+import java.io.IOException
+import java.net.ConnectException
+import java.net.SocketTimeoutException
+import java.net.UnknownHostException
+import java.util.concurrent.TimeUnit
 
 class SchulmanagerApi(private val sessionManager: SessionManager) {
     companion object {
@@ -36,13 +43,20 @@ class SchulmanagerApi(private val sessionManager: SessionManager) {
                 dispatcher.maxRequests = 64
                 dispatcher.maxRequestsPerHost = 16
                 dispatcher(dispatcher)
+
+                // Hard timeout covering DNS resolution, TCP connect, SSL handshake, and read
+                connectTimeout(10, TimeUnit.SECONDS)
+                readTimeout(15, TimeUnit.SECONDS)
+                writeTimeout(15, TimeUnit.SECONDS)
+                callTimeout(15, TimeUnit.SECONDS)
+                retryOnConnectionFailure(true)
             }
         }
         install(ContentNegotiation) {
             json(json)
         }
         install(HttpTimeout) {
-            requestTimeoutMillis = 20000 // Increased slightly for large parallel bursts
+            requestTimeoutMillis = 20000
             connectTimeoutMillis = 10000
             socketTimeoutMillis = 20000
         }
@@ -52,7 +66,7 @@ class SchulmanagerApi(private val sessionManager: SessionManager) {
                     Log.d(TAG, message)
                 }
             }
-            level = LogLevel.INFO // Reverted from ALL for speed
+            level = LogLevel.ALL
         }
         defaultRequest {
             header(HttpHeaders.ContentType, ContentType.Application.Json)
@@ -64,19 +78,20 @@ class SchulmanagerApi(private val sessionManager: SessionManager) {
     }
 
     suspend fun login(username: String, password: String, twoFactorCode: String? = null, userId: Int? = null): LoginResponse {
-        Log.d(TAG, "Starting login request for user: $username")
-        val payload = buildJsonObject {
-            put("emailOrUsername", username)
-            put("password", password)
-            put("hash", JsonNull)
-            put("mobileApp", false)
-            put("twoFactorCode", twoFactorCode)
-            put("userId", userId)
-        }
+        return safeNetworkCall {
+            Log.d(TAG, "Starting login request for user: $username")
+            val payload = buildJsonObject {
+                put("emailOrUsername", username)
+                put("password", password)
+                put("hash", JsonNull)
+                put("mobileApp", false)
+                put("twoFactorCode", twoFactorCode)
+                put("userId", userId)
+            }
 
-        val response: HttpResponse = client.post("$baseUrl/api/login") {
-            setBody(payload)
-        }
+            val response: HttpResponse = client.post("$baseUrl/api/login") {
+                setBody(payload)
+            }
 
         val status = response.status
         Log.d(TAG, "Login response status: $status")
@@ -87,9 +102,8 @@ class SchulmanagerApi(private val sessionManager: SessionManager) {
             throw Exception("Login failed ($status): $errBody")
         }
 
-        val parsed: LoginResponse = response.body()
-        Log.d(TAG, "Login response parsed successfully. Has JWT: ${parsed.jwt != null}")
-        return parsed
+            response.body()
+        }
     }
 
     /**
@@ -99,35 +113,60 @@ class SchulmanagerApi(private val sessionManager: SessionManager) {
         val chunks = requests.chunked(chunkSize)
         Log.d(TAG, "Executing ${requests.size} requests in ${chunks.size} chunks PARALLELLY")
 
-        val deferreds = chunks.mapIndexed { index, chunk ->
-            async {
-                Log.d(TAG, "Posting chunk ${index + 1}/${chunks.size} starting...")
-                val payload = ApiCallBundle(requests = chunk)
-                val response: HttpResponse = client.post("$baseUrl/api/calls") {
-                    header(HttpHeaders.Authorization, "Bearer $token")
-                    header("X-Skip-Bearer-Token-Renewal", "true")
-                    setBody(payload)
-                }
+            val deferreds = chunks.mapIndexed { index, chunk ->
+                async {
+                    Log.d(TAG, "Posting chunk ${index + 1}/${chunks.size} starting...")
+                    val payload = ApiCallBundle(requests = chunk)
+                    val response: HttpResponse = client.post("$baseUrl/api/calls") {
+                        header(HttpHeaders.Authorization, "Bearer $token")
+                        header("X-Skip-Bearer-Token-Renewal", "true")
+                        setBody(payload)
+                    }
 
-                if (response.status == HttpStatusCode.Unauthorized) {
-                    Log.w(TAG, "Received 401 Unauthorized, clearing session")
-                    sessionManager.clearSession()
-                    throw Exception("Session expired")
-                }
+                    if (response.status == HttpStatusCode.Unauthorized) {
+                        Log.w(TAG, "Received 401 Unauthorized, clearing session")
+                        sessionManager.clearSession()
+                        throw IOException("Session expired (401)")
+                    }
 
-                if (response.status != HttpStatusCode.OK) {
-                    val errBody = response.bodyAsText()
-                    Log.e(TAG, "Chunk ${index + 1} failed with status ${response.status}: $errBody")
-                    throw Exception("API call chunk ${index + 1} failed: $errBody")
-                }
+                    if (response.status != HttpStatusCode.OK) {
+                        val errBody = response.bodyAsText()
+                        Log.e(TAG, "Chunk ${index + 1} failed with status ${response.status}: $errBody")
+                        throw IOException("API call chunk ${index + 1} failed with status ${response.status}: $errBody")
+                    }
 
-                val body: ApiCallResponse = response.body()
-                Log.d(TAG, "Chunk ${index + 1}/${chunks.size} finished successfully")
-                body.results
+                    val body: ApiCallResponse = response.body()
+
+                    if (body.results.any { it.status == 401 }) {
+                        sessionManager.clearSession()
+                        throw IOException("Session expired (401)")
+                    }
+                    if (body.results.any { it.status == 429 }) {
+                        throw IOException("Rate limit (429)")
+                    }
+
+                    Log.d(TAG, "Chunk ${index + 1}/${chunks.size} finished successfully")
+                    body.results
+                }
+            }
+
+            val allResults = deferreds.flatMap { it.await() }
+            ApiCallResponse(results = allResults)
+        }
+    }
+
+    private suspend fun <T> safeNetworkCall(block: suspend () -> T): T {
+        return withContext(Dispatchers.IO) {
+            try {
+                block()
+            } catch (e: UnknownHostException) {
+                throw IOException("UnknownHostException", e)
+            } catch (e: ConnectException) {
+                throw IOException("ConnectException", e)
+            } catch (e: SocketTimeoutException) {
+                throw IOException("SocketTimeoutException", e)
+            } catch (e: Exception) {
+                throw e
             }
         }
-
-        val allResults = deferreds.flatMap { it.await() }
-        ApiCallResponse(results = allResults)
     }
-}

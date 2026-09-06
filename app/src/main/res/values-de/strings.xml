@@ -38,4 +38,11 @@
     <string name="settings_logout">Abmelden</string>
     <string name="sync_failed">Synchronisierung fehlgeschlagen</string>
     <string name="retry">Erneut versuchen</string>
+    <string name="error_no_internet">Keine Internetverbindung. Bitte Netzwerk überprüfen.</string>
+    <string name="error_server_unreachable">Server nicht erreichbar. Bitte später erneut versuchen.</string>
+    <string name="error_timeout">Zeitüberschreitung bei der Verbindung. Bitte erneut versuchen.</string>
+    <string name="error_rate_limited">Zu viele Anfragen. Bitte kurz warten.</string>
+    <string name="error_session_expired">Sitzung abgelaufen. Bitte erneut anmelden.</string>
+    <string name="error_login_failed">Anmeldung fehlgeschlagen. Bitte Zugangsdaten überprüfen.</string>
+    <string name="error_network_generic">Ein Netzwerkfehler ist aufgetreten.</string>
 </resources>
