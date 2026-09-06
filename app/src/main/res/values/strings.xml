@@ -85,7 +85,7 @@
     <string name="about_github">GitHub Repository</string>
     <string name="disclaimer_title">Unofficial Client</string>
     <string name="disclaimer_text">Xenon is an independent open-source project and is not endorsed by, sponsored by, or affiliated with Schulmanager Online or its parent company.</string>
-    <string name="debug_title">Developer Debug Tools</string>
+    <string name="debug_title">Debug Tools</string>
     <string name="debug_subtitle">Inspect network state, tokens, and payloads</string>
     <string name="debug_bundle_version">Bundle build hash</string>
     <string name="debug_jwt_token">Active JWT token</string>
