@@ -31,6 +31,8 @@ import java.time.format.TextStyle
 @Composable
 fun UntisWeeklyGrid(
     grid: TimetableGrid,
+    mergeLessons: Boolean = true,
+    scaleBreaks: Boolean = true,
     onSlotClick: (Int, MergedSlot, TimetableSlot) -> Unit
 ) {
     val hScrollState = rememberScrollState()
@@ -47,6 +49,7 @@ fun UntisWeeklyGrid(
     val classHours = grid.classHours
 
     Column(modifier = Modifier.fillMaxSize()) {
+        // Pinned Header Row
         Surface(
             color = MaterialTheme.colorScheme.surfaceContainerLow,
             tonalElevation = 1.dp
@@ -57,6 +60,7 @@ fun UntisWeeklyGrid(
                     .padding(vertical = BlockGap),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // Pinned "Per." / "Std." Column Header
                 Box(
                     modifier = Modifier.width(timeColWidth),
                     contentAlignment = Alignment.Center
@@ -71,6 +75,7 @@ fun UntisWeeklyGrid(
 
                 Spacer(modifier = Modifier.width(BlockGap))
 
+                // Scrollable Day Header Pills
                 Row(
                     modifier = Modifier.horizontalScroll(hScrollState),
                     horizontalArrangement = Arrangement.spacedBy(BlockGap)
@@ -115,6 +120,7 @@ fun UntisWeeklyGrid(
 
         HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
 
+        // Body: Pinned Time Column + Scrollable Day Cards
         BoxWithConstraints(
             modifier = Modifier
                 .weight(1f)
@@ -123,13 +129,14 @@ fun UntisWeeklyGrid(
             var totalGaps = 0.dp
             for (h in 1 until totalHours) {
                 val breakMin = getBreakMinutesAfter(h, classHours)
-                totalGaps += getBreakGapDp(breakMin)
+                totalGaps += getBreakGapDp(breakMin, scaleBreaks)
             }
 
             val baseHourHeight = maxOf(58.dp, (maxHeight - totalGaps) / totalHours)
 
             Box(modifier = Modifier.fillMaxSize().verticalScroll(vScrollState)) {
                 Row(modifier = Modifier.fillMaxWidth()) {
+                    // Pinned Timing Column on the left
                     Column(modifier = Modifier.width(timeColWidth)) {
                         for (h in 1..totalHours) {
                             val (startTime, endTime) = getTimeRangeForHour(h, classHours)
@@ -165,27 +172,28 @@ fun UntisWeeklyGrid(
 
                             if (h < totalHours) {
                                 val breakMin = getBreakMinutesAfter(h, classHours)
-                                Spacer(modifier = Modifier.height(getBreakGapDp(breakMin)))
+                                Spacer(modifier = Modifier.height(getBreakGapDp(breakMin, scaleBreaks)))
                             }
                         }
                     }
 
                     Spacer(modifier = Modifier.width(BlockGap))
 
+                    // Scrollable Day Columns
                     Row(
                         modifier = Modifier.horizontalScroll(hScrollState),
                         horizontalArrangement = Arrangement.spacedBy(BlockGap)
                     ) {
                         for (d in 1..5) {
                             val daySlots = grid.grid[d] ?: emptyMap()
-                            val mergedSlots = getMergedSlotsForDay(daySlots, totalHours)
+                            val mergedSlots = getMergedSlotsForDay(daySlots, totalHours, mergeLessons)
 
                             Column(modifier = Modifier.width(colWidth)) {
                                 for (merged in mergedSlots) {
                                     var blockHeight = baseHourHeight * merged.span
                                     for (i in merged.startHour until (merged.startHour + merged.span - 1)) {
                                         val breakMin = getBreakMinutesAfter(i, classHours)
-                                        blockHeight += getBreakGapDp(breakMin)
+                                        blockHeight += getBreakGapDp(breakMin, scaleBreaks)
                                     }
 
                                     Box(
@@ -203,7 +211,7 @@ fun UntisWeeklyGrid(
 
                                     if (merged.endHour < totalHours) {
                                         val breakMin = getBreakMinutesAfter(merged.endHour, classHours)
-                                        Spacer(modifier = Modifier.height(getBreakGapDp(breakMin)))
+                                        Spacer(modifier = Modifier.height(getBreakGapDp(breakMin, scaleBreaks)))
                                     }
                                 }
                             }

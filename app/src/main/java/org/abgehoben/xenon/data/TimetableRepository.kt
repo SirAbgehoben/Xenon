@@ -7,6 +7,20 @@ import kotlinx.serialization.json.*
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
+enum class IcalType {
+    TIMETABLE,
+    CALENDAR
+}
+
+data class CacheStats(
+    val cachedWeeksCount: Int,
+    val cachedCalendarDaysCount: Int,
+    val classHoursCount: Int,
+    val coursesCount: Int,
+    val teachersCount: Int,
+    val roomsCount: Int
+)
+
 class TimetableRepository(private val api: SchulmanagerApi) {
     companion object {
         private const val TAG = "TimetableRepo"
@@ -18,6 +32,24 @@ class TimetableRepository(private val api: SchulmanagerApi) {
     private val timetableCache = mutableMapOf<LocalDate, TimetableGrid>()
     private var cachedMetadata: SchoolMetadata? = null
     private var cachedCalendarEvents: Map<LocalDate, List<ProcessedEvent>>? = null
+
+    fun clearAllCache() {
+        timetableCache.clear()
+        cachedMetadata = null
+        cachedCalendarEvents = null
+    }
+
+    fun getCacheStats(): CacheStats {
+        val meta = cachedMetadata
+        return CacheStats(
+            cachedWeeksCount = timetableCache.size,
+            cachedCalendarDaysCount = cachedCalendarEvents?.size ?: 0,
+            classHoursCount = meta?.classHours?.size ?: 0,
+            coursesCount = meta?.courses?.size ?: 0,
+            teachersCount = meta?.teachers?.size ?: 0,
+            roomsCount = meta?.rooms?.size ?: 0
+        )
+    }
 
     suspend fun getFullTimetable(token: String, monday: LocalDate, forceRefresh: Boolean = false): TimetableGrid {
         if (!forceRefresh && timetableCache.containsKey(monday)) {
@@ -223,6 +255,38 @@ class TimetableRepository(private val api: SchulmanagerApi) {
                 return cachedCalendarEvents!!
             }
             throw e
+        }
+    }
+
+    suspend fun getIcalUrl(token: String, type: IcalType, renew: Boolean = false): String? {
+        val moduleName = if (type == IcalType.TIMETABLE) "schedules" else "calendar"
+        val endpointName = if (type == IcalType.TIMETABLE) "get-schedules-ical-token" else "get-ical-token"
+        val urlPath = if (type == IcalType.TIMETABLE) "schedules" else "calendar"
+
+        val request = ApiCallRequest(
+            moduleName = moduleName,
+            endpointName = endpointName,
+            parameters = buildJsonObject { put("renew", renew) }
+        )
+
+        return try {
+            val response = api.fetchCallsChunked(token, listOf(request), chunkSize = 1)
+            val data = response.results.firstOrNull()?.data
+
+            val icalToken = when {
+                data is JsonPrimitive && data.isString -> data.content
+                data is JsonObject && data["token"] != null -> data["token"]?.jsonPrimitive?.contentOrNull
+                else -> null
+            }
+
+            if (!icalToken.isNullOrEmpty()) {
+                "https://login.schulmanager-online.de/ical/$urlPath/$icalToken"
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to fetch iCal token for $type", e)
+            null
         }
     }
 }

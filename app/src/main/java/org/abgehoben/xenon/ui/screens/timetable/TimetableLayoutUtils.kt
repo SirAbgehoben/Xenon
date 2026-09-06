@@ -10,7 +10,16 @@ import java.time.LocalTime
 
 val BlockGap: Dp = 6.dp
 
-fun getMergedSlotsForDay(daySlots: Map<Int, TimetableSlot?>, maxHours: Int = 9): List<MergedSlot> {
+fun getMergedSlotsForDay(
+    daySlots: Map<Int, TimetableSlot?>,
+    maxHours: Int = 9,
+    mergeLessons: Boolean = true
+): List<MergedSlot> {
+    if (!mergeLessons) {
+        // If disabled, return each period as an individual span=1 block
+        return (1..maxHours).map { h -> MergedSlot(h, 1, daySlots[h]) }
+    }
+
     val result = mutableListOf<MergedSlot>()
     var h = 1
     while (h <= maxHours) {
@@ -92,7 +101,10 @@ fun getBreakMinutesAfter(hour: Int, classHours: List<ClassHour>): Long {
     }
 }
 
-fun getBreakGapDp(breakMinutes: Long): Dp {
+fun getBreakGapDp(breakMinutes: Long, scaleBreaks: Boolean = true): Dp {
+    if (!scaleBreaks) {
+        return 4.dp
+    }
     return when {
         breakMinutes >= 35 -> 28.dp
         breakMinutes >= 25 -> 20.dp

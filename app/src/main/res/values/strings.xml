@@ -96,4 +96,13 @@
     <string name="logout_dialog_title">Sign out?</string>
     <string name="logout_dialog_text">You will need to enter your username and password again to sign in.</string>
     <string name="cancel">Cancel</string>
+    <string name="ical_loading">Generating iCal subscription link…</string>
+    <string name="ical_rotate_token">Rotate Token</string>
+    <string name="ical_token_rotated">Calendar subscription token renewed</string>
+    <string name="user_role_student">Student</string>
+    <string name="account_logged_in_as">Signed in</string>
+    <string name="ical_tab_timetable">Timetable</string>
+    <string name="ical_tab_calendar">School Calendar</string>
+    <string name="ical_timetable_desc">Subscribe to your personal timetable in external calendar apps (Google Calendar, Apple Calendar):</string>
+    <string name="ical_calendar_desc">Subscribe to general school events and holidays in external calendar apps:</string>
 </resources>

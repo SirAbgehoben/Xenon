@@ -17,7 +17,6 @@ data class UserSettings(
     val defaultViewWeekly: Boolean = true,
     val mergeLessons: Boolean = true,
     val weekendAdvance: Boolean = true,
-    val showHolidays: Boolean = true,
     val scaleBreaks: Boolean = true,
     val preloadWeeks: Boolean = true
 )
@@ -29,7 +28,6 @@ class SettingsManager(private val context: Context) {
         private val KEY_DEFAULT_VIEW_WEEKLY = booleanPreferencesKey("default_view_weekly")
         private val KEY_MERGE_LESSONS = booleanPreferencesKey("merge_lessons")
         private val KEY_WEEKEND_ADVANCE = booleanPreferencesKey("weekend_advance")
-        private val KEY_SHOW_HOLIDAYS = booleanPreferencesKey("show_holidays")
         private val KEY_SCALE_BREAKS = booleanPreferencesKey("scale_breaks")
         private val KEY_PRELOAD_WEEKS = booleanPreferencesKey("preload_weeks")
     }
@@ -42,7 +40,6 @@ class SettingsManager(private val context: Context) {
             defaultViewWeekly = prefs[KEY_DEFAULT_VIEW_WEEKLY] ?: true,
             mergeLessons = prefs[KEY_MERGE_LESSONS] ?: true,
             weekendAdvance = prefs[KEY_WEEKEND_ADVANCE] ?: true,
-            showHolidays = prefs[KEY_SHOW_HOLIDAYS] ?: true,
             scaleBreaks = prefs[KEY_SCALE_BREAKS] ?: true,
             preloadWeeks = prefs[KEY_PRELOAD_WEEKS] ?: true
         )
@@ -53,7 +50,6 @@ class SettingsManager(private val context: Context) {
     suspend fun setDefaultViewWeekly(enabled: Boolean) = context.dataStore.edit { it[KEY_DEFAULT_VIEW_WEEKLY] = enabled }
     suspend fun setMergeLessons(enabled: Boolean) = context.dataStore.edit { it[KEY_MERGE_LESSONS] = enabled }
     suspend fun setWeekendAdvance(enabled: Boolean) = context.dataStore.edit { it[KEY_WEEKEND_ADVANCE] = enabled }
-    suspend fun setShowHolidays(enabled: Boolean) = context.dataStore.edit { it[KEY_SHOW_HOLIDAYS] = enabled }
     suspend fun setScaleBreaks(enabled: Boolean) = context.dataStore.edit { it[KEY_SCALE_BREAKS] = enabled }
     suspend fun setPreloadWeeks(enabled: Boolean) = context.dataStore.edit { it[KEY_PRELOAD_WEEKS] = enabled }
 }

@@ -41,6 +41,7 @@ fun DailyListView(
     grid: TimetableGrid,
     pagerState: PagerState,
     monday: LocalDate,
+    mergeLessons: Boolean = true,
     onTabSelected: (Int) -> Unit,
     onSlotClick: (Int, MergedSlot, TimetableSlot) -> Unit
 ) {
@@ -99,7 +100,7 @@ fun DailyListView(
                 subDate?.dayOfWeek?.value == dayIdx
             }
 
-            val mergedSlots = getMergedSlotsForDay(daySlots, 9).filter { it.slot != null }
+            val mergedSlots = getMergedSlotsForDay(daySlots, 9, mergeLessons).filter { it.slot != null }
 
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),

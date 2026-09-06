@@ -45,6 +45,8 @@ fun TimetableScreen(viewModel: MainViewModel) {
     val weekType = timetableGrid?.weekType ?: ""
     val mondayDate = timetableGrid?.mondayDate ?: LocalDate.now()
 
+    val userSettings by viewModel.userSettings.collectAsState()
+
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
@@ -90,6 +92,8 @@ fun TimetableScreen(viewModel: MainViewModel) {
                     if (weekly) {
                         UntisWeeklyGrid(
                             grid = timetableGrid!!,
+                            mergeLessons = userSettings.mergeLessons,
+                            scaleBreaks = userSettings.scaleBreaks,
                             onSlotClick = { d, merged, slot -> selectedSlot = Triple(d, merged, slot) }
                         )
                     } else {
@@ -97,6 +101,7 @@ fun TimetableScreen(viewModel: MainViewModel) {
                             grid = timetableGrid!!,
                             pagerState = pagerState,
                             monday = mondayDate,
+                            mergeLessons = userSettings.mergeLessons,
                             onTabSelected = { page -> scope.launch { pagerState.animateScrollToPage(page) } },
                             onSlotClick = { d, merged, slot -> selectedSlot = Triple(d, merged, slot) }
                         )

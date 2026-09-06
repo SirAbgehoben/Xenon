@@ -18,7 +18,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.withTimeout
 import org.abgehoben.xenon.data.*
-import java.io.IOException
 import java.net.ConnectException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
@@ -71,6 +70,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _isWeeklyView = MutableStateFlow(true)
     val isWeeklyView: StateFlow<Boolean> = _isWeeklyView
 
+    private val _lastScheduleLoadDurationMs = MutableStateFlow<Long?>(null)
+    val lastScheduleLoadDurationMs: StateFlow<Long?> = _lastScheduleLoadDurationMs
+
     private var currentSyncJob: Job? = null
     private var currentNavJob: Job? = null
 
@@ -113,7 +115,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 if (response.jwt != null) {
                     sessionManager.saveJwtToken(response.jwt)
                 } else {
-                    _appState.value = AppState.Error(getApplication<Application>().getString(R.string.error_login_failed))
+                    _appState.value = AppState.Error(
+                        getApplication<Application>().getString(R.string.error_login_failed)
+                    )
                 }
             } catch (e: Exception) {
                 if (e !is CancellationException) {
@@ -128,6 +132,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             sessionManager.clearSession()
             _timetableGrid.value = null
             _calendarEvents.value = emptyMap()
+            _lastScheduleLoadDurationMs.value = null
             _appState.value = AppState.LoginRequired
         }
     }
@@ -169,12 +174,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             currentNavJob = viewModelScope.launch(coroutineExceptionHandler) {
                 _isSyncing.value = true
                 _syncError.value = null
+                val startTime = System.currentTimeMillis()
                 try {
                     withTimeout(15_000L.milliseconds) {
                         val baseMonday = LocalDate.now().minusDays(LocalDate.now().dayOfWeek.value.toLong() - 1)
                         val targetMonday = baseMonday.plusWeeks(_weekOffset.value.toLong())
                         val grid = repository.getFullTimetable(state.token, targetMonday, forceRefresh)
                         _timetableGrid.value = grid
+                        _lastScheduleLoadDurationMs.value = System.currentTimeMillis() - startTime
                     }
                 } catch (e: Throwable) {
                     if (e !is CancellationException) {
@@ -187,7 +194,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun toggleViewMode() { _isWeeklyView.value = !_isWeeklyView.value }
+    fun toggleViewMode() {
+        _isWeeklyView.value = !_isWeeklyView.value
+    }
 
     fun startTieredSync(token: String, forceRefresh: Boolean = false) {
         currentSyncJob?.cancel()
@@ -195,6 +204,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         currentSyncJob = viewModelScope.launch(coroutineExceptionHandler) {
             _isSyncing.value = true
             _syncError.value = null
+            val startTime = System.currentTimeMillis()
             try {
                 withTimeout(20_000L.milliseconds) {
                     val baseMonday = LocalDate.now().minusDays(LocalDate.now().dayOfWeek.value.toLong() - 1)
@@ -209,6 +219,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         val calendarEvents = calendarDeferred.await()
 
                         _timetableGrid.value = grid
+                        _lastScheduleLoadDurationMs.value = System.currentTimeMillis() - startTime
 
                         // CRITICAL: Only update calendarEvents if non-null; never wipe existing data with emptyMap on failure
                         if (calendarEvents != null) {
@@ -278,20 +289,63 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // Settings actions
     fun setThemeMode(mode: ThemeMode) = viewModelScope.launch { settingsManager.setThemeMode(mode) }
     fun setDynamicColor(enabled: Boolean) = viewModelScope.launch { settingsManager.setDynamicColor(enabled) }
-    fun setDefaultViewWeekly(enabled: Boolean) = viewModelScope.launch { settingsManager.setDefaultViewWeekly(enabled) }
+    fun setDefaultViewWeekly(enabled: Boolean) = viewModelScope.launch {
+        settingsManager.setDefaultViewWeekly(enabled)
+        _isWeeklyView.value = enabled
+    }
     fun setMergeLessons(enabled: Boolean) = viewModelScope.launch { settingsManager.setMergeLessons(enabled) }
-    fun setWeekendAdvance(enabled: Boolean) = viewModelScope.launch { settingsManager.setWeekendAdvance(enabled) }
-    fun setShowHolidays(enabled: Boolean) = viewModelScope.launch { settingsManager.setShowHolidays(enabled) }
+    fun setWeekendAdvance(enabled: Boolean) = viewModelScope.launch {
+        settingsManager.setWeekendAdvance(enabled)
+        val today = LocalDate.now().dayOfWeek
+        if (today == DayOfWeek.SATURDAY || today == DayOfWeek.SUNDAY) {
+            _weekOffset.value = if (enabled) 1 else 0
+            refreshCurrentState(false)
+        }
+    }
     fun setScaleBreaks(enabled: Boolean) = viewModelScope.launch { settingsManager.setScaleBreaks(enabled) }
     fun setPreloadWeeks(enabled: Boolean) = viewModelScope.launch { settingsManager.setPreloadWeeks(enabled) }
 
     fun clearAppCache() {
+        repository.clearAllCache()
         _timetableGrid.value = null
         _calendarEvents.value = emptyMap()
+        _lastScheduleLoadDurationMs.value = null
         refreshData(forceRefresh = true)
     }
 
-    fun simulateNetworkError() {
-        _syncError.value = getApplication<Application>().getString(R.string.error_no_internet)
+    suspend fun fetchIcalUrl(type: IcalType, renew: Boolean = false): String? {
+        val token = (appState.value as? AppState.Authenticated)?.token ?: return null
+        return repository.getIcalUrl(token, type, renew)
+    }
+
+    fun getCacheStats(): CacheStats = repository.getCacheStats()
+
+    suspend fun pingServer(): Pair<Boolean, Long> {
+        val start = System.currentTimeMillis()
+        return try {
+            val response = api.fetchCallsChunked(
+                token = (appState.value as? AppState.Authenticated)?.token ?: "",
+                requests = listOf(ApiCallRequest("main", "login-status", kotlinx.serialization.json.buildJsonObject {})),
+                chunkSize = 1
+            )
+            val latency = System.currentTimeMillis() - start
+            Pair(response.results.isNotEmpty(), latency)
+        } catch (e: Exception) {
+            val latency = System.currentTimeMillis() - start
+            Pair(false, latency)
+        }
+    }
+
+    fun decodeJwtPayload(jwt: String?): String? {
+        if (jwt == null) return null
+        return try {
+            val parts = jwt.split(".")
+            if (parts.size >= 2) {
+                val decoded = android.util.Base64.decode(parts[1], android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING)
+                String(decoded, Charsets.UTF_8)
+            } else null
+        } catch (e: Exception) {
+            null
+        }
     }
 }

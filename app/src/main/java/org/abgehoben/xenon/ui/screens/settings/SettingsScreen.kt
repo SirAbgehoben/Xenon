@@ -19,16 +19,20 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import org.abgehoben.xenon.AppState
 import org.abgehoben.xenon.MainViewModel
 import org.abgehoben.xenon.R
+import org.abgehoben.xenon.data.IcalType
 import org.abgehoben.xenon.data.ThemeMode
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun SettingsScreen(viewModel: MainViewModel) {
     val userSettings by viewModel.userSettings.collectAsState()
     val appState by viewModel.appState.collectAsState()
+    val lastScheduleLoadDurationMs by viewModel.lastScheduleLoadDurationMs.collectAsState()
+    val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
     val uriHandler = LocalUriHandler.current
@@ -36,12 +40,17 @@ fun SettingsScreen(viewModel: MainViewModel) {
     // Pre-resolve strings composably to avoid context.getString() lint errors
     val cacheClearedMsg = stringResource(R.string.cache_cleared)
     val urlCopiedMsg = stringResource(R.string.url_copied)
+    val icalTokenRotatedMsg = stringResource(R.string.ical_token_rotated)
 
     var showThemeDialog by remember { mutableStateOf(false) }
     var showDisclaimerDialog by remember { mutableStateOf(false) }
     var showLogoutDialog by remember { mutableStateOf(false) }
     var showDebugDialog by remember { mutableStateOf(false) }
     var showIcalDialog by remember { mutableStateOf(false) }
+
+    var selectedIcalType by remember { mutableStateOf(IcalType.TIMETABLE) }
+    var icalUrl by remember { mutableStateOf<String?>(null) }
+    var isLoadingIcal by remember { mutableStateOf(false) }
 
     val activeToken = (appState as? AppState.Authenticated)?.token
 
@@ -66,7 +75,19 @@ fun SettingsScreen(viewModel: MainViewModel) {
                 .fillMaxSize(),
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
         ) {
-            // Section: Timetable
+            // Section 1: Account
+            item {
+                SettingsGroupCard(title = stringResource(R.string.section_account)) {
+                    SettingsClickableItem(
+                        title = stringResource(R.string.account_logged_in_as),
+                        subtitle = stringResource(R.string.user_role_student),
+                        icon = Icons.Default.AccountCircle,
+                        onClick = {}
+                    )
+                }
+            }
+
+            // Section 2: Timetable
             item {
                 SettingsGroupCard(title = stringResource(R.string.section_timetable)) {
                     SettingsClickableItem(
@@ -105,14 +126,6 @@ fun SettingsScreen(viewModel: MainViewModel) {
             // Section: Calendar
             item {
                 SettingsGroupCard(title = stringResource(R.string.section_calendar)) {
-                    SettingsSwitchItem(
-                        title = stringResource(R.string.pref_show_holidays),
-                        description = stringResource(R.string.pref_show_holidays_desc),
-                        icon = Icons.Default.EventAvailable,
-                        checked = userSettings.showHolidays,
-                        onCheckedChange = { viewModel.setShowHolidays(it) }
-                    )
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
                     SettingsClickableItem(
                         title = stringResource(R.string.pref_ical_feed),
                         subtitle = stringResource(R.string.pref_ical_feed_desc),
@@ -290,31 +303,83 @@ fun SettingsScreen(viewModel: MainViewModel) {
 
     // iCal Feed Dialog
     if (showIcalDialog) {
-        val icalUrl = "https://login.schulmanager-online.de/ical/calendar/${activeToken?.take(16) ?: "token"}"
+        LaunchedEffect(selectedIcalType) {
+            isLoadingIcal = true
+            icalUrl = viewModel.fetchIcalUrl(selectedIcalType, renew = false)
+            isLoadingIcal = false
+        }
+
         AlertDialog(
             onDismissRequest = { showIcalDialog = false },
-            title = { Text(stringResource(R.string.ical_dialog_title), fontWeight = FontWeight.Bold) },
+            title = {
+                Text(
+                    text = stringResource(R.string.ical_dialog_title),
+                    fontWeight = FontWeight.Bold
+                )
+            },
             text = {
                 Column {
-                    Text(stringResource(R.string.ical_dialog_desc))
+                    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                        SegmentedButton(
+                            selected = selectedIcalType == IcalType.TIMETABLE,
+                            onClick = { selectedIcalType = IcalType.TIMETABLE },
+                            shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
+                        ) {
+                            Text(stringResource(R.string.ical_tab_timetable))
+                        }
+                        SegmentedButton(
+                            selected = selectedIcalType == IcalType.CALENDAR,
+                            onClick = { selectedIcalType = IcalType.CALENDAR },
+                            shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
+                        ) {
+                            Text(stringResource(R.string.ical_tab_calendar))
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    Text(
+                        text = stringResource(
+                            if (selectedIcalType == IcalType.TIMETABLE) R.string.ical_timetable_desc
+                            else R.string.ical_calendar_desc
+                        ),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+
                     Spacer(modifier = Modifier.height(12.dp))
                     Surface(
                         shape = RoundedCornerShape(10.dp),
                         color = MaterialTheme.colorScheme.surfaceContainerLowest
                     ) {
                         Text(
-                            text = icalUrl,
+                            text = if (isLoadingIcal) stringResource(R.string.ical_loading) else (icalUrl ?: "—"),
                             modifier = Modifier.padding(10.dp),
                             style = MaterialTheme.typography.bodySmall,
                             fontWeight = FontWeight.Medium
                         )
                     }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    TextButton(
+                        onClick = {
+                            scope.launch {
+                                isLoadingIcal = true
+                                icalUrl = viewModel.fetchIcalUrl(selectedIcalType, renew = true)
+                                isLoadingIcal = false
+                                Toast.makeText(context, icalTokenRotatedMsg, Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    ) {
+                        Text(stringResource(R.string.ical_rotate_token))
+                    }
                 }
             },
             confirmButton = {
                 Button(
+                    enabled = !icalUrl.isNullOrEmpty(),
                     onClick = {
-                        clipboardManager.setText(AnnotatedString(icalUrl))
+                        clipboardManager.setText(AnnotatedString(icalUrl!!))
                         Toast.makeText(context, urlCopiedMsg, Toast.LENGTH_SHORT).show()
                         showIcalDialog = false
                     }
@@ -361,8 +426,11 @@ fun SettingsScreen(viewModel: MainViewModel) {
     if (showDebugDialog) {
         DebugDialog(
             jwtToken = activeToken,
-            bundleVersion = "deadbeef00",
-            onSimulateError = { viewModel.simulateNetworkError() },
+            decodedJwtJson = remember(activeToken) { viewModel.decodeJwtPayload(activeToken) },
+            bundleVersion = "PLACEHOLDERN",
+            cacheStats = remember { viewModel.getCacheStats() },
+            lastScheduleLoadDurationMs = lastScheduleLoadDurationMs,
+            onPingServer = { viewModel.pingServer() },
             onDismiss = { showDebugDialog = false }
         )
     }
