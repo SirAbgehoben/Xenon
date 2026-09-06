@@ -66,7 +66,7 @@ class SchulmanagerApi(private val sessionManager: SessionManager) {
                     Log.d(TAG, message)
                 }
             }
-            level = LogLevel.ALL
+            level = LogLevel.INFO
         }
         defaultRequest {
             header(HttpHeaders.ContentType, ContentType.Application.Json)
