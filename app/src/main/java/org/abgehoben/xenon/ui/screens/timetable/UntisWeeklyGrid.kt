@@ -48,6 +48,15 @@ fun UntisWeeklyGrid(
     val totalHours = 9
     val classHours = grid.classHours
 
+    val nowTime = rememberLiveTime()
+    val today = LocalDate.now()
+    val isCurrentWeek = !today.isBefore(grid.mondayDate) && !today.isAfter(grid.mondayDate.plusDays(4))
+    val currentDayIndex = today.dayOfWeek.value
+
+    val dynamicPrimary = MaterialTheme.colorScheme.primary
+    val dynamicPrimaryContainer = MaterialTheme.colorScheme.primaryContainer
+    val dynamicOnPrimaryContainer = MaterialTheme.colorScheme.onPrimaryContainer
+
     Column(modifier = Modifier.fillMaxSize()) {
         // Pinned Header Row
         Surface(
@@ -82,7 +91,7 @@ fun UntisWeeklyGrid(
                 ) {
                     for (i in 0..4) {
                         val date = grid.mondayDate.plusDays(i.toLong())
-                        val isToday = date == LocalDate.now()
+                        val isToday = date == today
                         val dayName = date.dayOfWeek.getDisplayName(TextStyle.SHORT, currentLocale)
 
                         Box(
@@ -91,7 +100,8 @@ fun UntisWeeklyGrid(
                         ) {
                             Surface(
                                 shape = RoundedCornerShape(12.dp),
-                                color = if (isToday) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHigh,
+                                color = if (isToday) dynamicPrimaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
+                                border = if (isToday) BorderStroke(1.5.dp, dynamicPrimary) else null,
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Column(
@@ -102,12 +112,12 @@ fun UntisWeeklyGrid(
                                         text = dayName,
                                         style = MaterialTheme.typography.labelMedium,
                                         fontWeight = FontWeight.ExtraBold,
-                                        color = if (isToday) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
+                                        color = if (isToday) dynamicOnPrimaryContainer else MaterialTheme.colorScheme.onSurface
                                     )
                                     Text(
                                         text = date.format(dFormatter),
                                         style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
-                                        color = if (isToday) MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.85f) else MaterialTheme.colorScheme.onSurfaceVariant
+                                        color = if (isToday) dynamicPrimary else MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                             }
@@ -133,6 +143,10 @@ fun UntisWeeklyGrid(
             }
 
             val baseHourHeight = maxOf(58.dp, (maxHeight - totalGaps) / totalHours)
+
+            val liveYOffset = remember(nowTime, baseHourHeight, scaleBreaks) {
+                calculateCurrentTimeYOffset(nowTime, totalHours, classHours, baseHourHeight, scaleBreaks)
+            }
 
             Box(modifier = Modifier.fillMaxSize().verticalScroll(vScrollState)) {
                 Row(modifier = Modifier.fillMaxWidth()) {
@@ -180,43 +194,53 @@ fun UntisWeeklyGrid(
                     Spacer(modifier = Modifier.width(BlockGap))
 
                     // Scrollable Day Columns
-                    Row(
-                        modifier = Modifier.horizontalScroll(hScrollState),
-                        horizontalArrangement = Arrangement.spacedBy(BlockGap)
-                    ) {
-                        for (d in 1..5) {
-                            val daySlots = grid.grid[d] ?: emptyMap()
-                            val mergedSlots = getMergedSlotsForDay(daySlots, totalHours, mergeLessons)
+                    Box(modifier = Modifier.horizontalScroll(hScrollState)) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(BlockGap)) {
+                            for (d in 1..5) {
+                                val daySlots = grid.grid[d] ?: emptyMap()
+                                val mergedSlots = getMergedSlotsForDay(daySlots, totalHours, mergeLessons)
 
-                            Column(modifier = Modifier.width(colWidth)) {
-                                for (merged in mergedSlots) {
-                                    var blockHeight = baseHourHeight * merged.span
-                                    for (i in merged.startHour until (merged.startHour + merged.span - 1)) {
-                                        val breakMin = getBreakMinutesAfter(i, classHours)
-                                        blockHeight += getBreakGapDp(breakMin, scaleBreaks)
-                                    }
-
-                                    Box(
-                                        modifier = Modifier
-                                            .height(blockHeight)
-                                            .fillMaxWidth()
-                                            .clickable(enabled = merged.slot != null) {
-                                                if (merged.slot != null) onSlotClick(d, merged, merged.slot)
-                                            }
-                                    ) {
-                                        if (merged.slot != null) {
-                                            UntisGridCell(merged.slot, merged.span)
+                                Column(modifier = Modifier.width(colWidth)) {
+                                    for (merged in mergedSlots) {
+                                        var blockHeight = baseHourHeight * merged.span
+                                        for (i in merged.startHour until (merged.startHour + merged.span - 1)) {
+                                            val breakMin = getBreakMinutesAfter(i, classHours)
+                                            blockHeight += getBreakGapDp(breakMin, scaleBreaks)
                                         }
-                                    }
 
-                                    if (merged.endHour < totalHours) {
-                                        val breakMin = getBreakMinutesAfter(merged.endHour, classHours)
-                                        Spacer(modifier = Modifier.height(getBreakGapDp(breakMin, scaleBreaks)))
+                                        Box(
+                                            modifier = Modifier
+                                                .height(blockHeight)
+                                                .fillMaxWidth()
+                                                .clickable(enabled = merged.slot != null) {
+                                                    if (merged.slot != null) onSlotClick(d, merged, merged.slot)
+                                                }
+                                        ) {
+                                            if (merged.slot != null) {
+                                                UntisGridCell(merged.slot, merged.span)
+                                            }
+                                        }
+
+                                        if (merged.endHour < totalHours) {
+                                            val breakMin = getBreakMinutesAfter(merged.endHour, classHours)
+                                            Spacer(modifier = Modifier.height(getBreakGapDp(breakMin, scaleBreaks)))
+                                        }
                                     }
                                 }
                             }
+                            Spacer(modifier = Modifier.width(BlockGap))
                         }
-                        Spacer(modifier = Modifier.width(BlockGap))
+
+                        if (isCurrentWeek && liveYOffset != null) {
+                            LiveTimeIndicatorOverlay(
+                                yOffset = liveYOffset,
+                                currentDayIndex = currentDayIndex,
+                                colWidth = colWidth,
+                                blockGap = BlockGap,
+                                lineColor = dynamicPrimary,
+                                modifier = Modifier.matchParentSize()
+                            )
+                        }
                     }
                 }
             }
