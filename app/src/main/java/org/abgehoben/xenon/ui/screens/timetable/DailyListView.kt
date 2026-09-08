@@ -4,7 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.shape.CircleShape
@@ -14,8 +14,7 @@ import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.EventBusy
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -32,7 +31,9 @@ import org.abgehoben.xenon.data.ClassHour
 import org.abgehoben.xenon.data.MergedSlot
 import org.abgehoben.xenon.data.TimetableGrid
 import org.abgehoben.xenon.data.TimetableSlot
+import java.time.Duration
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 
@@ -42,10 +43,13 @@ fun DailyListView(
     pagerState: PagerState,
     monday: LocalDate,
     mergeLessons: Boolean = true,
+    scaleBreaks: Boolean = true,
     onTabSelected: (Int) -> Unit,
     onSlotClick: (Int, MergedSlot, TimetableSlot) -> Unit
 ) {
     val classHours = grid.classHours
+    val nowTime = rememberLiveTime()
+    val today = LocalDate.now()
 
     // Observable locale from Compose configuration
     val currentLocale = LocalConfiguration.current.locales[0]
@@ -85,6 +89,9 @@ fun DailyListView(
 
         HorizontalPager(state = pagerState, modifier = Modifier.weight(1f)) { page ->
             val dayIdx = page + 1
+            val pageDate = monday.plusDays(page.toLong())
+            val isToday = pageDate == today
+
             val daySlots = grid.grid[dayIdx] ?: emptyMap()
             val activeSlots = daySlots.values.filterNotNull()
 
@@ -98,14 +105,13 @@ fun DailyListView(
                     else LocalDate.parse(sub.date, DateTimeFormatter.ofPattern("dd.MM.yyyy"))
                 } catch (_: Exception) { null }
                 subDate?.dayOfWeek?.value == dayIdx
-            }
+            }.distinctBy { it.text }
 
             val mergedSlots = getMergedSlotsForDay(daySlots, 9, mergeLessons).filter { it.slot != null }
 
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                contentPadding = PaddingValues(16.dp)
             ) {
                 if (isFullDayEvent) {
                     val first = activeSlots.first()
@@ -160,18 +166,63 @@ fun DailyListView(
                         }
                     }
                 } else {
-                    items(mergedSlots) { merged ->
+                    itemsIndexed(mergedSlots) { index, merged ->
+                        val (startStr, _) = getTimeRangeForHour(merged.startHour, classHours)
+                        val (_, endStr) = getTimeRangeForHour(merged.endHour, classHours)
+                        val lessonStart = runCatching { LocalTime.parse(startStr) }.getOrNull()
+                        val lessonEnd = runCatching { LocalTime.parse(endStr) }.getOrNull()
+
+                        val isCurrentLesson = isToday && lessonStart != null && lessonEnd != null &&
+                                !nowTime.isBefore(lessonStart) && !nowTime.isAfter(lessonEnd)
+
+                        val currentProgress = if (isCurrentLesson) {
+                            val totalMin = Duration.between(lessonStart, lessonEnd).toMinutes().coerceAtLeast(1)
+                            val elapsedMin = Duration.between(lessonStart, nowTime).toMinutes()
+                            (elapsedMin.toFloat() / totalMin).coerceIn(0f, 1f)
+                        } else 0f
+
                         CompactLessonCard(
                             mergedSlot = merged,
                             classHours = classHours,
+                            isCurrentLesson = isCurrentLesson,
+                            currentProgress = currentProgress,
                             onClick = { onSlotClick(dayIdx, merged, merged.slot!!) }
                         )
+
+                        if (index < mergedSlots.size - 1) {
+                            val nextMerged = mergedSlots[index + 1]
+                            val breakMin = getBreakMinutesAfter(merged.endHour, classHours)
+                            val gapDp = getBreakGapDp(breakMin, scaleBreaks)
+
+                            val nextStartStr = getTimeRangeForHour(nextMerged.startHour, classHours).first
+                            val nextStart = runCatching { LocalTime.parse(nextStartStr) }.getOrNull()
+
+                            val isCurrentBreak = isToday && lessonEnd != null && nextStart != null &&
+                                    nowTime.isAfter(lessonEnd) && nowTime.isBefore(nextStart)
+
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(gapDp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (isCurrentBreak) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(2.5.dp)
+                                            .clip(CircleShape)
+                                            .background(MaterialTheme.colorScheme.primary)
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
 
                 if (daySubs.isNotEmpty() && !isFullDayEvent) {
                     item {
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.Info, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
                             Spacer(modifier = Modifier.width(6.dp))
@@ -182,8 +233,9 @@ fun DailyListView(
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                         }
+                        Spacer(modifier = Modifier.height(6.dp))
                     }
-                    items(daySubs) { sub ->
+                    itemsIndexed(daySubs) { subIdx, sub ->
                         Surface(
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp),
@@ -197,6 +249,9 @@ fun DailyListView(
                                 color = if (sub.cancelled) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
                             )
                         }
+                        if (subIdx < daySubs.size - 1) {
+                            Spacer(modifier = Modifier.height(6.dp))
+                        }
                     }
                 }
             }
@@ -208,6 +263,8 @@ fun DailyListView(
 fun CompactLessonCard(
     mergedSlot: MergedSlot,
     classHours: List<ClassHour>,
+    isCurrentLesson: Boolean = false,
+    currentProgress: Float = 0f,
     onClick: () -> Unit
 ) {
     val slot = mergedSlot.slot
@@ -230,7 +287,6 @@ fun CompactLessonCard(
     }
 
     val (startTime, _) = getTimeRangeForHour(mergedSlot.startHour, classHours)
-    val (_, endTime) = getTimeRangeForHour(mergedSlot.endHour, classHours)
 
     Surface(
         modifier = Modifier
@@ -241,83 +297,100 @@ fun CompactLessonCard(
         color = colorPair.first,
         tonalElevation = 1.dp
     ) {
-        Row(
-            modifier = Modifier.fillMaxSize(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .padding(start = 4.dp)
-                    .width(4.dp)
-                    .fillMaxHeight(0.7f)
-                    .clip(CircleShape)
-                    .background(accentColor)
-            )
-
-            Column(
-                modifier = Modifier.width(48.dp).padding(start = 6.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+        Box(modifier = Modifier.fillMaxSize()) {
+            Row(
+                modifier = Modifier.fillMaxSize(),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = if (mergedSlot.span > 1) "${mergedSlot.startHour}-${mergedSlot.endHour}" else "${mergedSlot.startHour}",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Black
+                Box(
+                    modifier = Modifier
+                        .padding(start = 4.dp)
+                        .width(4.dp)
+                        .fillMaxHeight(0.7f)
+                        .clip(CircleShape)
+                        .background(accentColor)
                 )
-                if (startTime.isNotEmpty()) {
-                    Text(
-                        text = startTime,
-                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
-                    )
-                }
-            }
 
-            Column(modifier = Modifier.weight(1f).padding(start = 6.dp)) {
+                Column(
+                    modifier = Modifier.width(48.dp).padding(start = 6.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = if (mergedSlot.span > 1) "${mergedSlot.startHour}-${mergedSlot.endHour}" else "${mergedSlot.startHour}",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Black
+                    )
+                    if (startTime.isNotEmpty()) {
+                        Text(
+                            text = startTime,
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                        )
+                    }
+                }
+
+                Column(modifier = Modifier.weight(1f).padding(start = 6.dp)) {
+                    if (slot != null) {
+                        if (slot.cancelled) {
+                            Text(
+                                text = stringResource(R.string.cancelled_prefix, slot.course),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.error,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        val mainText = slot.substitution ?: if (!slot.cancelled) slot.course else null
+                        if (mainText != null) {
+                            Text(
+                                text = mainText,
+                                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.5.sp),
+                                fontWeight = FontWeight.ExtraBold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                color = if (isSubstitution && !slot.cancelled) Color(0xFF2E7D32) else colorPair.second
+                            )
+                        }
+
+                        if (slot.substitution == null || !slot.cancelled) {
+                            Text(
+                                text = slot.teacher,
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                color = colorPair.second.copy(alpha = 0.75f)
+                            )
+                        }
+                    } else {
+                        Text(
+                            text = stringResource(R.string.free_period),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = colorPair.second.copy(alpha = 0.5f)
+                        )
+                    }
+                }
+
                 if (slot != null) {
-                    if (slot.cancelled) {
+                    val r = slot.subRoom ?: slot.newRoom ?: slot.room
+                    if (r.isNotEmpty()) {
                         Text(
-                            text = stringResource(R.string.cancelled_prefix, slot.course),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.error,
-                            fontWeight = FontWeight.Bold
+                            text = r,
+                            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Black, fontSize = 11.sp),
+                            modifier = Modifier.padding(end = 14.dp),
+                            color = if (slot.newRoom != null || slot.subRoom != null) accentColor else colorPair.second
                         )
                     }
-                    val mainText = slot.substitution ?: if (!slot.cancelled) slot.course else null
-                    if (mainText != null) {
-                        Text(
-                            text = mainText,
-                            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.5.sp),
-                            fontWeight = FontWeight.ExtraBold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            color = if (isSubstitution && !slot.cancelled) Color(0xFF2E7D32) else colorPair.second
-                        )
-                    }
-
-                    if (slot.substitution == null || !slot.cancelled) {
-                        Text(
-                            text = slot.teacher,
-                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                            color = colorPair.second.copy(alpha = 0.75f)
-                        )
-                    }
-                } else {
-                    Text(
-                        text = stringResource(R.string.free_period),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = colorPair.second.copy(alpha = 0.5f)
-                    )
                 }
             }
 
-            if (slot != null) {
-                val r = slot.subRoom ?: slot.newRoom ?: slot.room
-                if (r.isNotEmpty()) {
-                    Text(
-                        text = r,
-                        style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Black, fontSize = 11.sp),
-                        modifier = Modifier.padding(end = 14.dp),
-                        color = if (slot.newRoom != null || slot.subRoom != null) accentColor else colorPair.second
+            // Live Time Indicator Line across active ongoing lesson
+            if (isCurrentLesson && currentProgress in 0f..1f) {
+                BoxWithConstraints(modifier = Modifier.matchParentSize()) {
+                    val lineY = maxHeight * currentProgress
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .offset(y = lineY - 1.dp)
+                            .height(2.5.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary)
                     )
                 }
             }

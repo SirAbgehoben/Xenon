@@ -102,6 +102,7 @@ fun TimetableScreen(viewModel: MainViewModel) {
                             pagerState = pagerState,
                             monday = mondayDate,
                             mergeLessons = userSettings.mergeLessons,
+                            scaleBreaks = userSettings.scaleBreaks,
                             onTabSelected = { page -> scope.launch { pagerState.animateScrollToPage(page) } },
                             onSlotClick = { d, merged, slot -> selectedSlot = Triple(d, merged, slot) }
                         )
