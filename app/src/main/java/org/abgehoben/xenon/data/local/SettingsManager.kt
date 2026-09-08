@@ -6,20 +6,9 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-
-enum class ThemeMode {
-    SYSTEM, LIGHT, DARK
-}
-
-data class UserSettings(
-    val themeMode: ThemeMode = ThemeMode.SYSTEM,
-    val dynamicColor: Boolean = true,
-    val defaultViewWeekly: Boolean = true,
-    val mergeLessons: Boolean = true,
-    val weekendAdvance: Boolean = true,
-    val scaleBreaks: Boolean = true,
-    val preloadWeeks: Boolean = true
-)
+import org.abgehoben.xenon.data.local.datastore.dataStore
+import org.abgehoben.xenon.data.local.model.ThemeMode
+import org.abgehoben.xenon.data.local.model.UserSettings
 
 class SettingsManager(private val context: Context) {
     companion object {
