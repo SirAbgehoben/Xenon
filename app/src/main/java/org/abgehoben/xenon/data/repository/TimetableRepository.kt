@@ -3,48 +3,24 @@ package org.abgehoben.xenon.data.repository
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonNull
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.decodeFromJsonElement
-import kotlinx.serialization.json.jsonPrimitive
-import kotlinx.serialization.json.put
-import kotlinx.serialization.json.putJsonArray
-import kotlinx.serialization.json.putJsonObject
-import org.abgehoben.xenon.data.ApiCallRequest
-import org.abgehoben.xenon.data.CalendarCategory
-import org.abgehoben.xenon.data.CalendarEvent
-import org.abgehoben.xenon.data.CalendarResponse
-import org.abgehoben.xenon.data.ClassHour
-import org.abgehoben.xenon.data.Course
-import org.abgehoben.xenon.data.Lesson
-import org.abgehoben.xenon.data.ProcessedEvent
-import org.abgehoben.xenon.data.SchoolMetadata
-import org.abgehoben.xenon.data.Substitution
-import org.abgehoben.xenon.data.TimetableGrid
-import org.abgehoben.xenon.data.repository.builder.TimetableGridBuilder
+import kotlinx.serialization.json.*
+import org.abgehoben.xenon.data.model.calendar.IcalType
+import org.abgehoben.xenon.data.model.calendar.ProcessedEvent
+import org.abgehoben.xenon.data.model.system.CacheStats
+import org.abgehoben.xenon.data.model.timetable.SchoolMetadata
+import org.abgehoben.xenon.data.model.timetable.TimetableGrid
 import org.abgehoben.xenon.data.remote.SchulmanagerApi
+import org.abgehoben.xenon.data.remote.dto.calendar.CalendarCategory
+import org.abgehoben.xenon.data.remote.dto.calendar.CalendarEvent
+import org.abgehoben.xenon.data.remote.dto.calendar.CalendarResponse
+import org.abgehoben.xenon.data.remote.dto.rpc.ApiCallRequest
+import org.abgehoben.xenon.data.remote.dto.timetable.ClassHour
+import org.abgehoben.xenon.data.remote.dto.timetable.Course
+import org.abgehoben.xenon.data.remote.dto.timetable.Lesson
+import org.abgehoben.xenon.data.remote.dto.timetable.Substitution
+import org.abgehoben.xenon.data.repository.builder.TimetableGridBuilder
 import java.time.LocalDate
-import java.time.LocalTime
 import java.time.format.DateTimeFormatter
-import kotlin.collections.get
-
-enum class IcalType {
-    TIMETABLE,
-    CALENDAR
-}
-
-data class CacheStats(
-    val cachedWeeksCount: Int,
-    val cachedCalendarDaysCount: Int,
-    val classHoursCount: Int,
-    val coursesCount: Int,
-    val teachersCount: Int,
-    val roomsCount: Int
-)
 
 class TimetableRepository(private val api: SchulmanagerApi) {
     companion object {
@@ -115,30 +91,10 @@ class TimetableRepository(private val api: SchulmanagerApi) {
                                 }
                             }
                             putJsonArray("include") {
-                                add(buildJsonObject {
-                                    put("association", "course"); put(
-                                    "required",
-                                    false
-                                )
-                                })
-                                add(buildJsonObject {
-                                    put("association", "room"); put(
-                                    "required",
-                                    false
-                                )
-                                })
-                                add(buildJsonObject {
-                                    put(
-                                        "association",
-                                        "teachers"
-                                    ); put("required", false)
-                                })
-                                add(buildJsonObject {
-                                    put("association", "lessons"); put(
-                                    "required",
-                                    false
-                                )
-                                })
+                                add(buildJsonObject { put("association", "course"); put("required", false) })
+                                add(buildJsonObject { put("association", "room"); put("required", false) })
+                                add(buildJsonObject { put("association", "teachers"); put("required", false) })
+                                add(buildJsonObject { put("association", "lessons"); put("required", false) })
                             }
                         })
                     }
@@ -154,47 +110,19 @@ class TimetableRepository(private val api: SchulmanagerApi) {
         val metadataRequests = if (cachedMetadata == null) {
             listOf(
                 ApiCallRequest("main", "poqa", buildJsonObject {
-                    putJsonObject("action") {
-                        put("model", "main/class-hour"); put(
-                        "action",
-                        "findAll"
-                    ); putJsonArray("parameters") { add(buildJsonObject {}) }
-                    }
+                    putJsonObject("action") { put("model", "main/class-hour"); put("action", "findAll"); putJsonArray("parameters") { add(buildJsonObject {}) } }
                 }),
                 ApiCallRequest("main", "poqa", buildJsonObject {
-                    putJsonObject("action") {
-                        put("model", "main/course"); put(
-                        "action",
-                        "findAll"
-                    ); putJsonArray("parameters") { add(buildJsonObject {}) }
-                    }
+                    putJsonObject("action") { put("model", "main/course"); put("action", "findAll"); putJsonArray("parameters") { add(buildJsonObject {}) } }
                 }),
                 ApiCallRequest("main", "poqa", buildJsonObject {
-                    putJsonObject("action") {
-                        put("model", "main/room"); put(
-                        "action",
-                        "findAll"
-                    ); putJsonArray("parameters") { add(buildJsonObject {}) }
-                    }
+                    putJsonObject("action") { put("model", "main/room"); put("action", "findAll"); putJsonArray("parameters") { add(buildJsonObject {}) } }
                 }),
                 ApiCallRequest("main", "poqa", buildJsonObject {
-                    putJsonObject("action") {
-                        put("model", "main/teacher"); put(
-                        "action",
-                        "findAll"
-                    ); putJsonArray("parameters") { add(buildJsonObject {}) }
-                    }
+                    putJsonObject("action") { put("model", "main/teacher"); put("action", "findAll"); putJsonArray("parameters") { add(buildJsonObject {}) } }
                 }),
                 ApiCallRequest("main", "poqa", buildJsonObject {
-                    putJsonObject("action") {
-                        put(
-                            "model",
-                            "main/teacher-course-attendance"
-                        ); put(
-                        "action",
-                        "findAll"
-                    ); putJsonArray("parameters") { add(buildJsonObject {}) }
-                    }
+                    putJsonObject("action") { put("model", "main/teacher-course-attendance"); put("action", "findAll"); putJsonArray("parameters") { add(buildJsonObject {}) } }
                 })
             )
         } else emptyList()
@@ -206,40 +134,26 @@ class TimetableRepository(private val api: SchulmanagerApi) {
             val data = response.results.map { it.data ?: JsonNull }
 
             val grid = withContext(Dispatchers.Default) {
-                val lessons = data.getOrNull(0)?.takeIf { it !is JsonNull }
-                    ?.let { json.decodeFromJsonElement<List<Lesson>>(it) } ?: emptyList()
-                val substitutions = data.getOrNull(1)?.takeIf { it !is JsonNull }
-                    ?.let { json.decodeFromJsonElement<List<Substitution>>(it) } ?: emptyList()
-                val calendar = data.getOrNull(2)?.takeIf { it !is JsonNull }
-                    ?.let { json.decodeFromJsonElement<CalendarResponse>(it) } ?: CalendarResponse()
+                val lessons = data.getOrNull(0)?.takeIf { it !is JsonNull }?.let { json.decodeFromJsonElement<List<Lesson>>(it) } ?: emptyList()
+                val substitutions = data.getOrNull(1)?.takeIf { it !is JsonNull }?.let { json.decodeFromJsonElement<List<Substitution>>(it) } ?: emptyList()
+                val calendar = data.getOrNull(2)?.takeIf { it !is JsonNull }?.let { json.decodeFromJsonElement<CalendarResponse>(it) } ?: CalendarResponse()
 
                 if (metadataRequests.isNotEmpty() && data.size >= 8) {
-                    val chList = data.getOrNull(3)?.takeIf { it !is JsonNull }
-                        ?.let { json.decodeFromJsonElement<List<ClassHour>>(it) } ?: emptyList()
-                    val cList = data.getOrNull(4)?.takeIf { it !is JsonNull }
-                        ?.let { json.decodeFromJsonElement<List<Course>>(it) } ?: emptyList()
+                    val chList = data.getOrNull(3)?.takeIf { it !is JsonNull }?.let { json.decodeFromJsonElement<List<ClassHour>>(it) } ?: emptyList()
+                    val cList = data.getOrNull(4)?.takeIf { it !is JsonNull }?.let { json.decodeFromJsonElement<List<Course>>(it) } ?: emptyList()
 
                     if (chList.isNotEmpty() && cList.isNotEmpty()) {
                         cachedMetadata = SchoolMetadata(
                             classHours = chList,
                             courses = cList,
-                            rooms = data.getOrNull(5)?.takeIf { it !is JsonNull }
-                                ?.let { json.decodeFromJsonElement(it) } ?: emptyList(),
-                            teachers = data.getOrNull(6)?.takeIf { it !is JsonNull }
-                                ?.let { json.decodeFromJsonElement(it) } ?: emptyList(),
-                            tca = data.getOrNull(7)?.takeIf { it !is JsonNull }
-                                ?.let { json.decodeFromJsonElement(it) } ?: emptyList()
+                            rooms = data.getOrNull(5)?.takeIf { it !is JsonNull }?.let { json.decodeFromJsonElement(it) } ?: emptyList(),
+                            teachers = data.getOrNull(6)?.takeIf { it !is JsonNull }?.let { json.decodeFromJsonElement(it) } ?: emptyList(),
+                            tca = data.getOrNull(7)?.takeIf { it !is JsonNull }?.let { json.decodeFromJsonElement(it) } ?: emptyList()
                         )
                     }
                 }
 
-                val meta = cachedMetadata ?: SchoolMetadata(
-                    emptyList(),
-                    emptyList(),
-                    emptyList(),
-                    emptyList(),
-                    emptyList()
-                )
+                val meta = cachedMetadata ?: SchoolMetadata(emptyList(), emptyList(), emptyList(), emptyList(), emptyList())
 
                 TimetableGridBuilder.build(
                     monday = monday,
@@ -257,7 +171,6 @@ class TimetableRepository(private val api: SchulmanagerApi) {
             timetableCache[monday] = grid
             return grid
         } catch (e: Throwable) {
-            // Offline fallback: serve cached timetable if available
             if (timetableCache.containsKey(monday)) {
                 Log.w(TAG, "Network failed, serving cached timetable for $monday")
                 return timetableCache[monday]!!
@@ -288,12 +201,8 @@ class TimetableRepository(private val api: SchulmanagerApi) {
             val response = api.fetchCallsChunked(token, requests, chunkSize = 2)
 
             val eventsMap = withContext(Dispatchers.Default) {
-                val calData = json.decodeFromJsonElement<CalendarResponse>(
-                    response.results.getOrNull(0)?.data ?: JsonNull
-                )
-                val catsRaw = json.decodeFromJsonElement<List<CalendarCategory>>(
-                    response.results.getOrNull(1)?.data ?: JsonNull
-                )
+                val calData = json.decodeFromJsonElement<CalendarResponse>(response.results.getOrNull(0)?.data ?: JsonNull)
+                val catsRaw = json.decodeFromJsonElement<List<CalendarCategory>>(response.results.getOrNull(1)?.data ?: JsonNull)
                 val catMap = catsRaw.associate { it.id to it.name }
 
                 val allEvents = mutableListOf<CalendarEvent>()
@@ -304,15 +213,12 @@ class TimetableRepository(private val api: SchulmanagerApi) {
                 val eventsByDay = mutableMapOf<LocalDate, MutableList<ProcessedEvent>>()
                 allEvents.forEach { ev ->
                     val startDt = TimetableGridBuilder.parseIsoLocal(ev.start ?: ev.startDate ?: "")
-                    val endDt =
-                        TimetableGridBuilder.parseIsoLocal(ev.end ?: ev.endDate ?: ev.start ?: "")
+                    val endDt = TimetableGridBuilder.parseIsoLocal(ev.end ?: ev.endDate ?: ev.start ?: "")
 
                     if (startDt != null) {
                         val sDate = startDt.toLocalDate()
                         var eDate = endDt?.toLocalDate() ?: sDate
-                        if (endDt != null && endDt.toLocalTime()
-                                .isBefore(LocalTime.of(1, 0)) && eDate.isAfter(sDate)
-                        ) {
+                        if (endDt != null && endDt.toLocalTime().isBefore(java.time.LocalTime.of(1, 0)) && eDate.isAfter(sDate)) {
                             eDate = eDate.minusDays(1)
                         }
 
@@ -322,15 +228,8 @@ class TimetableRepository(private val api: SchulmanagerApi) {
                             location = ev.location ?: "",
                             organizer = ev.organizer ?: "",
                             category = catMap[ev.categoryId] ?: "Allgemein",
-                            allDay = ev.allDay || (startDt.toLocalTime().isBefore(
-                                LocalTime.of(
-                                    1,
-                                    0
-                                )
-                            ) && (endDt == null || endDt.toLocalTime()
-                                .isAfter(LocalTime.of(23, 0)))),
-                            isHoliday = (ev.summary ?: ev.title ?: "").lowercase()
-                                .let { it.contains("ferien") || it.contains("feiertag") },
+                            allDay = ev.allDay || (startDt.toLocalTime().isBefore(java.time.LocalTime.of(1, 0)) && (endDt == null || endDt.toLocalTime().isAfter(java.time.LocalTime.of(23, 0)))),
+                            isHoliday = (ev.summary ?: ev.title ?: "").lowercase().let { it.contains("ferien") || it.contains("feiertag") },
                             startTime = startDt.toLocalTime().toString().substring(0, 5),
                             endTime = endDt?.toLocalTime()?.toString()?.substring(0, 5) ?: "",
                             startDate = sDate,
@@ -350,7 +249,6 @@ class TimetableRepository(private val api: SchulmanagerApi) {
             cachedCalendarEvents = eventsMap
             return eventsMap
         } catch (e: Throwable) {
-            // Offline fallback: serve cached calendar events if available
             if (cachedCalendarEvents != null) {
                 Log.w(TAG, "Network failed, serving cached calendar events")
                 return cachedCalendarEvents!!

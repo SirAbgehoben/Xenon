@@ -24,7 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 import org.abgehoben.xenon.R
-import org.abgehoben.xenon.data.repository.CacheStats
+import org.abgehoben.xenon.data.CacheStats
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter

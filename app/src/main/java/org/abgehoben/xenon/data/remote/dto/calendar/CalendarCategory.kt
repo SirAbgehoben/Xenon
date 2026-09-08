@@ -1,4 +1,9 @@
 package org.abgehoben.xenon.data.remote.dto.calendar
 
-class CalendarCategory {
-}
+import kotlinx.serialization.Serializable
+
+@Serializable
+data class CalendarCategory(
+    val id: Int,
+    val name: String
+)

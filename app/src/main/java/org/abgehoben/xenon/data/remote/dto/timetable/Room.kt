@@ -1,4 +1,10 @@
 package org.abgehoben.xenon.data.remote.dto.timetable
 
-class Room {
-}
+import kotlinx.serialization.Serializable
+
+@Serializable
+data class Room(
+    val id: Int,
+    val name: String? = null,
+    val abbreviation: String? = null
+)

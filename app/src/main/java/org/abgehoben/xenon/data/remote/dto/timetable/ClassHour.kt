@@ -1,4 +1,11 @@
 package org.abgehoben.xenon.data.remote.dto.timetable
 
-class ClassHour {
-}
+import kotlinx.serialization.Serializable
+
+@Serializable
+data class ClassHour(
+    val id: Int,
+    val number: Int,
+    val from: String,
+    val until: String
+)

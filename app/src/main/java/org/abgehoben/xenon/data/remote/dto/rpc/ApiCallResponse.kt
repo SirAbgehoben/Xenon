@@ -1,4 +1,8 @@
 package org.abgehoben.xenon.data.remote.dto.rpc
 
-class ApiCallResponse {
-}
+import kotlinx.serialization.Serializable
+
+@Serializable
+data class ApiCallResponse(
+    val results: List<ApiCallResult>
+)

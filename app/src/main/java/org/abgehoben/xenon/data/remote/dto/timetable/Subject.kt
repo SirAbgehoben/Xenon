@@ -1,4 +1,8 @@
 package org.abgehoben.xenon.data.remote.dto.timetable
 
-class Subject {
-}
+import kotlinx.serialization.Serializable
+
+@Serializable
+data class Subject(
+    val abbreviation: String? = null
+)

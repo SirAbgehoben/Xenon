@@ -1,4 +1,10 @@
 package org.abgehoben.xenon.data.remote.dto.timetable
 
-class Teacher {
-}
+import kotlinx.serialization.Serializable
+
+@Serializable
+data class Teacher(
+    val id: Int,
+    val abbreviation: String? = null,
+    val lastname: String? = null
+)

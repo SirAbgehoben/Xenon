@@ -1,4 +1,10 @@
 package org.abgehoben.xenon.data.remote.dto.auth
 
-class User {
-}
+import kotlinx.serialization.Serializable
+
+@Serializable
+data class User(
+    val id: Int? = null,
+    val firstname: String? = null,
+    val lastname: String? = null
+)
