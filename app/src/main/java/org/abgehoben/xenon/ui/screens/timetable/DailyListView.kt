@@ -275,7 +275,7 @@ fun CompactLessonCard(
         slot.isHoliday -> MaterialTheme.colorScheme.tertiary
         isSubstitution -> Color(0xFF4CAF50)
         slot.cancelled -> MaterialTheme.colorScheme.error
-        else -> MaterialTheme.colorScheme.secondary
+        else -> MaterialTheme.colorScheme.primary
     }
 
     val colorPair = when {
