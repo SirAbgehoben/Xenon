@@ -1,21 +1,41 @@
-package org.abgehoben.xenon.data
+package org.abgehoben.xenon.data.remote
 
 import android.util.Log
-import io.ktor.client.*
-import io.ktor.client.call.*
-import io.ktor.client.engine.okhttp.*
-import io.ktor.client.plugins.*
-import io.ktor.client.plugins.contentnegotiation.*
-import io.ktor.client.plugins.logging.*
-import io.ktor.client.request.*
-import io.ktor.client.statement.*
-import io.ktor.http.*
-import io.ktor.serialization.kotlinx.json.*
+import io.ktor.client.HttpClient
+import io.ktor.client.HttpClientConfig
+import io.ktor.client.call.body
+import io.ktor.client.engine.okhttp.OkHttp
+import io.ktor.client.plugins.HttpTimeout
+import io.ktor.client.plugins.HttpTimeoutConfig
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.plugins.defaultRequest
+import io.ktor.client.plugins.logging.LogLevel
+import io.ktor.client.plugins.logging.Logger
+import io.ktor.client.plugins.logging.Logging
+import io.ktor.client.plugins.logging.LoggingConfig
+import io.ktor.client.request.header
+import io.ktor.client.request.post
+import io.ktor.client.request.setBody
+import io.ktor.client.statement.HttpResponse
+import io.ktor.client.statement.bodyAsText
+import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpStatusCode
+import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.json.*
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import okhttp3.Dispatcher
+import org.abgehoben.xenon.data.ApiCallBundle
+import org.abgehoben.xenon.data.ApiCallRequest
+import org.abgehoben.xenon.data.ApiCallResponse
+import org.abgehoben.xenon.data.LoginResponse
+import org.abgehoben.xenon.data.local.SessionManager
 import java.io.IOException
 import java.net.ConnectException
 import java.net.SocketTimeoutException
@@ -39,7 +59,7 @@ class SchulmanagerApi(private val sessionManager: SessionManager) {
         engine {
             config {
                 // Maximize concurrent connections to the same host
-                val dispatcher = okhttp3.Dispatcher()
+                val dispatcher = Dispatcher()
                 dispatcher.maxRequests = 64
                 dispatcher.maxRequestsPerHost = 16
                 dispatcher(dispatcher)
@@ -52,26 +72,29 @@ class SchulmanagerApi(private val sessionManager: SessionManager) {
                 retryOnConnectionFailure(true)
             }
         }
-        install(ContentNegotiation) {
+        HttpClientConfig.install(ContentNegotiation) {
             json(json)
         }
-        install(HttpTimeout) {
-            requestTimeoutMillis = 20000
-            connectTimeoutMillis = 10000
-            socketTimeoutMillis = 20000
+        HttpClientConfig.install(HttpTimeout) {
+            HttpTimeoutConfig.requestTimeoutMillis = 20000
+            HttpTimeoutConfig.connectTimeoutMillis = 10000
+            HttpTimeoutConfig.socketTimeoutMillis = 20000
         }
-        install(Logging) {
-            logger = object : Logger {
+        HttpClientConfig.install(Logging) {
+            LoggingConfig.logger = object : Logger {
                 override fun log(message: String) {
                     Log.d(TAG, message)
                 }
             }
-            level = LogLevel.INFO
+            LoggingConfig.level = LogLevel.INFO
         }
         defaultRequest {
             header(HttpHeaders.ContentType, ContentType.Application.Json)
             header(HttpHeaders.Accept, "application/json, text/plain, */*")
-            header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+            header(
+                "User-Agent",
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            )
             header("Origin", baseUrl)
             header("Referer", "$baseUrl/")
         }
@@ -109,9 +132,10 @@ class SchulmanagerApi(private val sessionManager: SessionManager) {
     /**
      * Executes requests in chunks of [chunkSize] PARALLELLY to maximize speed.
      */
-    suspend fun fetchCallsChunked(token: String, requests: List<ApiCallRequest>, chunkSize: Int = 2): ApiCallResponse = coroutineScope {
-        val chunks = requests.chunked(chunkSize)
-        Log.d(TAG, "Executing ${requests.size} requests in ${chunks.size} chunks PARALLELLY")
+    suspend fun fetchCallsChunked(token: String, requests: List<ApiCallRequest>, chunkSize: Int = 2): ApiCallResponse =
+        coroutineScope {
+            val chunks = requests.chunked(chunkSize)
+            Log.d(TAG, "Executing ${requests.size} requests in ${chunks.size} chunks PARALLELLY")
 
             val deferreds = chunks.mapIndexed { index, chunk ->
                 async {
@@ -131,7 +155,10 @@ class SchulmanagerApi(private val sessionManager: SessionManager) {
 
                     if (response.status != HttpStatusCode.OK) {
                         val errBody = response.bodyAsText()
-                        Log.e(TAG, "Chunk ${index + 1} failed with status ${response.status}: $errBody")
+                        Log.e(
+                            TAG,
+                            "Chunk ${index + 1} failed with status ${response.status}: $errBody"
+                        )
                         throw IOException("API call chunk ${index + 1} failed with status ${response.status}: $errBody")
                     }
 
@@ -155,18 +182,18 @@ class SchulmanagerApi(private val sessionManager: SessionManager) {
         }
     }
 
-    private suspend fun <T> safeNetworkCall(block: suspend () -> T): T {
-        return withContext(Dispatchers.IO) {
-            try {
-                block()
-            } catch (e: UnknownHostException) {
-                throw IOException("UnknownHostException", e)
-            } catch (e: ConnectException) {
-                throw IOException("ConnectException", e)
-            } catch (e: SocketTimeoutException) {
-                throw IOException("SocketTimeoutException", e)
-            } catch (e: Exception) {
-                throw e
-            }
+private suspend fun <T> safeNetworkCall(block: suspend () -> T): T {
+    return withContext(Dispatchers.IO) {
+        try {
+            block()
+        } catch (e: UnknownHostException) {
+            throw IOException("UnknownHostException", e)
+        } catch (e: ConnectException) {
+            throw IOException("ConnectException", e)
+        } catch (e: SocketTimeoutException) {
+            throw IOException("SocketTimeoutException", e)
+        } catch (e: Exception) {
+            throw e
         }
     }
+}

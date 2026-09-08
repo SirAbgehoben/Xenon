@@ -1,4 +1,4 @@
-package org.abgehoben.xenon.data
+package org.abgehoben.xenon.data.local
 
 import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey

@@ -1,9 +1,21 @@
-package org.abgehoben.xenon.data
+package org.abgehoben.xenon.data.repository.builder
 
+import org.abgehoben.xenon.data.CalendarResponse
+import org.abgehoben.xenon.data.ClassHour
+import org.abgehoben.xenon.data.Course
+import org.abgehoben.xenon.data.Lesson
+import org.abgehoben.xenon.data.Room
+import org.abgehoben.xenon.data.Substitution
+import org.abgehoben.xenon.data.SubstitutionSummary
+import org.abgehoben.xenon.data.Teacher
+import org.abgehoben.xenon.data.TeacherCourseAttendance
+import org.abgehoben.xenon.data.TimetableGrid
+import org.abgehoben.xenon.data.TimetableSlot
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.time.temporal.IsoFields
+import kotlin.collections.get
 
 object TimetableGridBuilder {
 
@@ -245,8 +257,24 @@ object TimetableGridBuilder {
             listOf(7, 8).forEach { h ->
                 grid[3]!![h]?.let { s -> grid[3]!![h] = s.copy(cancelled = true) }
             }
-            subsSummary.add(SubstitutionSummary("02.09.2026", "Mittwoch", "Stunde 1-2", true, "PL-GK1 [ENTFÄLLT] -> SW , BN (AULA)"))
-            subsSummary.add(SubstitutionSummary("02.09.2026", "Mittwoch", "Stunde 7-8", true, "PH-GK1 [ENTFÄLLT]"))
+            subsSummary.add(
+                SubstitutionSummary(
+                    "02.09.2026",
+                    "Mittwoch",
+                    "Stunde 1-2",
+                    true,
+                    "PL-GK1 [ENTFÄLLT] -> SW , BN (AULA)"
+                )
+            )
+            subsSummary.add(
+                SubstitutionSummary(
+                    "02.09.2026",
+                    "Mittwoch",
+                    "Stunde 7-8",
+                    true,
+                    "PH-GK1 [ENTFÄLLT]"
+                )
+            )
         }
 
         if (mondayStr <= "2026-09-04" && "2026-09-04" <= fridayStr) {
@@ -265,17 +293,41 @@ object TimetableGridBuilder {
                     lessonId = existing?.lessonId
                 )
             }
-            subsSummary.add(SubstitutionSummary("04.09.2026", "Freitag", "Stunde 1-4", false, "One Note/TEAMS-Einführung MS, SW, ME, BN (R.KLMensa)"))
+            subsSummary.add(
+                SubstitutionSummary(
+                    "04.09.2026",
+                    "Freitag",
+                    "Stunde 1-4",
+                    false,
+                    "One Note/TEAMS-Einführung MS, SW, ME, BN (R.KLMensa)"
+                )
+            )
         }
 
         if (mondayStr <= "2026-09-07" && "2026-09-07" <= fridayStr) {
             listOf(7, 8, 9).forEach { grid[1]?.get(it)?.let { s -> grid[1]!![it] = s.copy(newRoom = "R.SMG") } }
-            subsSummary.add(SubstitutionSummary("07.09.2026", "Montag", "Stunde 7-9", false, "SP-GK2: Raumwechsel (R.GH1) -> R.SMG"))
+            subsSummary.add(
+                SubstitutionSummary(
+                    "07.09.2026",
+                    "Montag",
+                    "Stunde 7-9",
+                    false,
+                    "SP-GK2: Raumwechsel (R.GH1) -> R.SMG"
+                )
+            )
         }
 
         if (mondayStr <= "2026-09-09" && "2026-09-09" <= fridayStr) {
             for (h in 1..10) grid[3]?.get(h)?.let { s -> grid[3]!![h] = s.copy(cancelled = true, substitution = "Ganztag") }
-            subsSummary.add(SubstitutionSummary("09.09.2026", "Mittwoch", "Ganztägig", true, "Pädagogischer Ganztag (unterrichtsfrei) [ENTFÄLLT]"))
+            subsSummary.add(
+                SubstitutionSummary(
+                    "09.09.2026",
+                    "Mittwoch",
+                    "Ganztägig",
+                    true,
+                    "Pädagogischer Ganztag (unterrichtsfrei) [ENTFÄLLT]"
+                )
+            )
         }
     }
 

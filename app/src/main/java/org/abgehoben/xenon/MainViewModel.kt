@@ -18,6 +18,14 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.withTimeout
 import org.abgehoben.xenon.data.*
+import org.abgehoben.xenon.data.local.SessionManager
+import org.abgehoben.xenon.data.local.SettingsManager
+import org.abgehoben.xenon.data.local.ThemeMode
+import org.abgehoben.xenon.data.local.UserSettings
+import org.abgehoben.xenon.data.remote.SchulmanagerApi
+import org.abgehoben.xenon.data.repository.CacheStats
+import org.abgehoben.xenon.data.repository.IcalType
+import org.abgehoben.xenon.data.repository.TimetableRepository
 import java.net.ConnectException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException

@@ -23,8 +23,8 @@ import kotlinx.coroutines.launch
 import org.abgehoben.xenon.AppState
 import org.abgehoben.xenon.MainViewModel
 import org.abgehoben.xenon.R
-import org.abgehoben.xenon.data.IcalType
-import org.abgehoben.xenon.data.ThemeMode
+import org.abgehoben.xenon.data.repository.IcalType
+import org.abgehoben.xenon.data.local.ThemeMode
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable

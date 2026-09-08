@@ -33,7 +33,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import org.abgehoben.xenon.data.ThemeMode
+import org.abgehoben.xenon.data.local.ThemeMode
 import org.abgehoben.xenon.ui.screens.LoginScreen
 import org.abgehoben.xenon.ui.screens.calendar.CalendarScreen
 import org.abgehoben.xenon.ui.screens.settings.SettingsScreen
