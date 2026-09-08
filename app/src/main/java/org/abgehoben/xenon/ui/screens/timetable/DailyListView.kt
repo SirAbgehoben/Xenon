@@ -37,6 +37,8 @@ import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 
+private val TimeIndicatorHeight = 1.dp //TODO
+
 @Composable
 fun DailyListView(
     grid: TimetableGrid,
@@ -176,9 +178,9 @@ fun DailyListView(
                                 !nowTime.isBefore(lessonStart) && !nowTime.isAfter(lessonEnd)
 
                         val currentProgress = if (isCurrentLesson) {
-                            val totalMin = Duration.between(lessonStart, lessonEnd).toMinutes().coerceAtLeast(1)
-                            val elapsedMin = Duration.between(lessonStart, nowTime).toMinutes()
-                            (elapsedMin.toFloat() / totalMin).coerceIn(0f, 1f)
+                            val totalSec = Duration.between(lessonStart, lessonEnd).seconds.coerceAtLeast(1)
+                            val elapsedSec = Duration.between(lessonStart, nowTime).seconds
+                            (elapsedSec.toFloat() / totalSec).coerceIn(0f, 1f)
                         } else 0f
 
                         CompactLessonCard(
@@ -200,17 +202,24 @@ fun DailyListView(
                             val isCurrentBreak = isToday && lessonEnd != null && nextStart != null &&
                                     nowTime.isAfter(lessonEnd) && nowTime.isBefore(nextStart)
 
+                            val breakProgress = if (isCurrentBreak) {
+                                val totalSec = Duration.between(lessonEnd, nextStart).seconds.coerceAtLeast(1)
+                                val elapsedSec = Duration.between(lessonEnd, nowTime).seconds
+                                (elapsedSec.toFloat() / totalSec).coerceIn(0f, 1f)
+                            } else 0f
+
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(gapDp),
-                                contentAlignment = Alignment.Center
+                                    .height(gapDp)
                             ) {
                                 if (isCurrentBreak) {
+                                    val lineY = gapDp * breakProgress
                                     Box(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .height(2.5.dp)
+                                            .offset(y = lineY - (TimeIndicatorHeight / 2))
+                                            .height(TimeIndicatorHeight)
                                             .clip(CircleShape)
                                             .background(MaterialTheme.colorScheme.primary)
                                     )
@@ -287,17 +296,21 @@ fun CompactLessonCard(
     }
 
     val (startTime, _) = getTimeRangeForHour(mergedSlot.startHour, classHours)
+    val cardHeight = if (mergedSlot.span >= 2) 66.dp else 58.dp
 
-    Surface(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(if (mergedSlot.span >= 2) 66.dp else 58.dp)
-            .clickable(enabled = slot != null, onClick = onClick),
-        shape = RoundedCornerShape(14.dp),
-        color = colorPair.first,
-        tonalElevation = 1.dp
+            .height(cardHeight)
     ) {
-        Box(modifier = Modifier.fillMaxSize()) {
+        Surface(
+            modifier = Modifier
+                .fillMaxSize()
+                .clickable(enabled = slot != null, onClick = onClick),
+            shape = RoundedCornerShape(14.dp),
+            color = colorPair.first,
+            tonalElevation = 1.dp
+        ) {
             Row(
                 modifier = Modifier.fillMaxSize(),
                 verticalAlignment = Alignment.CenterVertically
@@ -379,21 +392,18 @@ fun CompactLessonCard(
                     }
                 }
             }
+        }
 
-            // Live Time Indicator Line across active ongoing lesson
-            if (isCurrentLesson && currentProgress in 0f..1f) {
-                BoxWithConstraints(modifier = Modifier.matchParentSize()) {
-                    val lineY = maxHeight * currentProgress
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .offset(y = lineY - 1.dp)
-                            .height(2.5.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primary)
-                    )
-                }
-            }
+        if (isCurrentLesson && currentProgress in 0f..1f) {
+            val lineY = cardHeight * currentProgress
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .offset(y = lineY - (TimeIndicatorHeight / 2))
+                    .height(TimeIndicatorHeight)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primary)
+            )
         }
     }
 }
