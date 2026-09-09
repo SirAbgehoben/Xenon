@@ -1,3 +1,4 @@
+// main/java/org/abgehoben/xenon/ui/screens/timetable/DailyListView.kt
 package org.abgehoben.xenon.ui.screens.timetable
 
 import androidx.compose.foundation.background
@@ -360,7 +361,7 @@ fun CompactLessonCard(
                                 fontWeight = FontWeight.ExtraBold,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
-                                color = if (isSubstitution && !slot.cancelled) Color(0xFF2E7D32) else colorPair.second
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                         }
 
@@ -387,7 +388,7 @@ fun CompactLessonCard(
                             text = r,
                             style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Black, fontSize = 11.sp),
                             modifier = Modifier.padding(end = 14.dp),
-                            color = if (slot.newRoom != null || slot.subRoom != null) accentColor else colorPair.second
+                            color = if (slot.newRoom != null || slot.subRoom != null) accentColor else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
