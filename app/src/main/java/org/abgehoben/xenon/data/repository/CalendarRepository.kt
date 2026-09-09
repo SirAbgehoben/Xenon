@@ -158,11 +158,9 @@ class CalendarRepository(
 
         return try {
             val response = api.fetchCallsChunked(token, listOf(request), chunkSize = 1)
-            val data = response.results.firstOrNull()?.data
-
-            val icalToken = when {
-                data is JsonPrimitive && data.isString -> data.content
-                data is JsonObject && data["token"] != null -> data["token"]?.jsonPrimitive?.contentOrNull
+            val icalToken = when (val data = response.results.firstOrNull()?.data) {
+                is JsonPrimitive if data.isString -> data.content
+                is JsonObject if data["token"] != null -> data["token"]?.jsonPrimitive?.contentOrNull
                 else -> null
             }
 

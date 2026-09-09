@@ -16,9 +16,9 @@ class StudentResolver(
 
     private val json = Json { ignoreUnknownKeys = true }
 
-    //TODO: this still just searches for one student, there is the possibility of a parent having multiple :surprised_pikachu:, I still need to implement that, including an option in the settings to switch betwen them (at least for now I think that would be the best way to handle that)
+    //TODO: this still just searches for one student, there is the possibility of a parent having multiple :surprised_pikachu:, I still need to implement that, including an option in the settings to switch between them (at least for now I think that would be the best way to handle that)
     suspend fun resolveActiveStudent(token: String): JsonObject? {
-        // 1. Check local session cache
+        // 1. Check the local session cache
         val cachedJson = runCatching {
             sessionManager?.studentData?.firstOrNull()?.let { json.parseToJsonElement(it).jsonObject }
         }.getOrNull()

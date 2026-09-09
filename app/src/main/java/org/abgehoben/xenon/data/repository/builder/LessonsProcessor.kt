@@ -122,7 +122,7 @@ object LessonsProcessor {
         dayGrid[hour] = TimetableSlot(
             course = subject,
             teacher = teachers,
-            room = if (originalRoom.isNotEmpty()) originalRoom else newRoom,
+            room = originalRoom.ifEmpty { newRoom },
             cancelled = false,
             substitution = comment,
             newRoom = if (hasRoomChange) newRoom else null,
