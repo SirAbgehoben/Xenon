@@ -166,6 +166,20 @@ class SchulmanagerApi(private val sessionManager: SessionManager) {
         ApiCallResponse(results = allResults)
     }
 
+    suspend fun getLoginStatus(token: String): JsonObject? {
+        return safeNetworkCall {
+            val response: HttpResponse = client.post("$baseUrl/api/login-status") {
+                header(HttpHeaders.Authorization, "Bearer $token")
+                setBody(buildJsonObject {})
+            }
+            if (response.status == HttpStatusCode.OK) {
+                response.body<JsonObject>()
+            } else {
+                null
+            }
+        }
+    }
+
     private suspend fun <T> safeNetworkCall(block: suspend () -> T): T {
         return withContext(Dispatchers.IO) {
             try {
