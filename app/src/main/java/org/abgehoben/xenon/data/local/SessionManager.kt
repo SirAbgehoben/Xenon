@@ -17,15 +17,6 @@ class SessionManager(private val context: Context) {
     val jwtToken: Flow<String?> = context.dataStore.data.map { it[JWT_TOKEN] }
     val studentData: Flow<String?> = context.dataStore.data.map { it[STUDENT_DATA] }
 
-    suspend fun saveSession(token: String, studentJson: String? = null) {
-        context.dataStore.edit { preferences ->
-            preferences[JWT_TOKEN] = token
-            if (studentJson != null) {
-                preferences[STUDENT_DATA] = studentJson
-            }
-        }
-    }
-
     suspend fun saveStudentData(studentJson: String) {
         context.dataStore.edit { it[STUDENT_DATA] = studentJson }
     }
