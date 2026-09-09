@@ -1,53 +1,35 @@
 package org.abgehoben.xenon.data.repository.cache
 
-import org.abgehoben.xenon.data.model.calendar.ProcessedEvent
-import org.abgehoben.xenon.data.model.system.CacheStats
-import org.abgehoben.xenon.data.model.timetable.SchoolMetadata
 import org.abgehoben.xenon.data.model.timetable.TimetableGrid
+import org.abgehoben.xenon.data.remote.dto.timetable.ClassHour
 import java.time.LocalDate
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicReference
 
 class TimetableCache {
-    private val timetableCache = ConcurrentHashMap<LocalDate, TimetableGrid>()
-    private val cachedMetadata = AtomicReference<SchoolMetadata?>(null)
-    private val cachedCalendarEvents = AtomicReference<Map<LocalDate, List<ProcessedEvent>>?>(null)
+    private val gridCache = ConcurrentHashMap<LocalDate, TimetableGrid>()
+    private val classHoursCache = AtomicReference<List<ClassHour>?>(null)
 
-    fun getGrid(monday: LocalDate): TimetableGrid? = timetableCache[monday]
+    fun getGrid(monday: LocalDate): TimetableGrid? = gridCache[monday]
 
     fun putGrid(monday: LocalDate, grid: TimetableGrid) {
-        timetableCache[monday] = grid
+        gridCache[monday] = grid
     }
 
-    fun containsGrid(monday: LocalDate): Boolean = timetableCache.containsKey(monday)
+    fun containsGrid(monday: LocalDate): Boolean = gridCache.containsKey(monday)
 
-    fun getMetadata(): SchoolMetadata? = cachedMetadata.get()
+    fun getClassHours(): List<ClassHour>? = classHoursCache.get()
 
-    fun putMetadata(metadata: SchoolMetadata) {
-        cachedMetadata.set(metadata)
+    fun putClassHours(classHours: List<ClassHour>) {
+        classHoursCache.set(classHours)
     }
 
-    fun getCalendarEvents(): Map<LocalDate, List<ProcessedEvent>>? = cachedCalendarEvents.get()
+    fun getCachedWeeksCount(): Int = gridCache.size
 
-    fun putCalendarEvents(events: Map<LocalDate, List<ProcessedEvent>>) {
-        cachedCalendarEvents.set(events)
-    }
-
-    fun getStats(): CacheStats {
-        val meta = cachedMetadata.get()
-        return CacheStats(
-            cachedWeeksCount = timetableCache.size,
-            cachedCalendarDaysCount = cachedCalendarEvents.get()?.size ?: 0,
-            classHoursCount = meta?.classHours?.size ?: 0,
-            coursesCount = meta?.courses?.size ?: 0,
-            teachersCount = meta?.teachers?.size ?: 0,
-            roomsCount = meta?.rooms?.size ?: 0
-        )
-    }
+    fun getClassHoursCount(): Int = classHoursCache.get()?.size ?: 0
 
     fun clear() {
-        timetableCache.clear()
-        cachedMetadata.set(null)
-        cachedCalendarEvents.set(null)
+        gridCache.clear()
+        classHoursCache.set(null)
     }
 }
