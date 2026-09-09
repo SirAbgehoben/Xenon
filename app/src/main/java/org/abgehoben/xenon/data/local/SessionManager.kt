@@ -1,3 +1,4 @@
+// main/java/org/abgehoben/xenon/data/local/SessionManager.kt
 package org.abgehoben.xenon.data.local
 
 import android.content.Context
@@ -10,21 +11,30 @@ import org.abgehoben.xenon.data.local.datastore.dataStore
 class SessionManager(private val context: Context) {
     companion object {
         private val JWT_TOKEN = stringPreferencesKey("jwt_token")
+        private val STUDENT_DATA = stringPreferencesKey("student_data")
     }
 
-    val jwtToken: Flow<String?> = context.dataStore.data.map { preferences ->
-        preferences[JWT_TOKEN]
+    val jwtToken: Flow<String?> = context.dataStore.data.map { it[JWT_TOKEN] }
+    val studentData: Flow<String?> = context.dataStore.data.map { it[STUDENT_DATA] }
+
+    suspend fun saveSession(token: String, studentJson: String? = null) {
+        context.dataStore.edit { preferences ->
+            preferences[JWT_TOKEN] = token
+            if (studentJson != null) {
+                preferences[STUDENT_DATA] = studentJson
+            }
+        }
+    }
+
+    suspend fun saveStudentData(studentJson: String) {
+        context.dataStore.edit { it[STUDENT_DATA] = studentJson }
     }
 
     suspend fun saveJwtToken(token: String) {
-        context.dataStore.edit { preferences ->
-            preferences[JWT_TOKEN] = token
-        }
+        context.dataStore.edit { it[JWT_TOKEN] = token }
     }
 
     suspend fun clearSession() {
-        context.dataStore.edit { preferences ->
-            preferences.remove(JWT_TOKEN)
-        }
+        context.dataStore.edit { it.clear() }
     }
 }

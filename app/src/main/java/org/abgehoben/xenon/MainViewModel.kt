@@ -103,6 +103,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             sessionManager.jwtToken.collectLatest { token ->
                 if (token != null) {
                     _appState.value = AppState.Authenticated(token)
+                    ensureStudentData(token)
                     startTieredSync(token)
                 } else {
                     _appState.value = AppState.LoginRequired
@@ -111,6 +112,34 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+
+    private suspend fun ensureStudentData(token: String) {
+        try {
+            val statusObj = api.getLoginStatus(token)
+            val userObj = statusObj?.get("user") as? kotlinx.serialization.json.JsonObject
+
+            val directStudent = userObj?.get("associatedStudent") as? kotlinx.serialization.json.JsonObject
+            val parentStudent = (userObj?.get("associatedParents") as? kotlinx.serialization.json.JsonArray)
+                ?.mapNotNull { (it as? kotlinx.serialization.json.JsonObject)?.get("student") as? kotlinx.serialization.json.JsonObject }
+                ?.firstOrNull()
+            val pluralStudent = (userObj?.get("associatedStudents") as? kotlinx.serialization.json.JsonArray)
+                ?.firstOrNull() as? kotlinx.serialization.json.JsonObject
+
+            val resolved = directStudent
+                ?: parentStudent
+                ?: pluralStudent
+                ?: userObj
+
+            if (resolved != null) {
+                sessionManager.saveStudentData(resolved.toString())
+                Log.d("MainViewModel", "Saved resolved student data: $resolved")
+            }
+        } catch (e: Exception) {
+            Log.w("MainViewModel", "Failed to resolve student info from login-status", e)
+        }
+    }
+
+    // In MainViewModel.kt -> login()
     fun login(username: String, password: String) {
         viewModelScope.launch(coroutineExceptionHandler) {
             _appState.value = AppState.Loading
@@ -118,6 +147,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val response = api.login(username, password)
                 if (response.jwt != null) {
                     sessionManager.saveJwtToken(response.jwt)
+                    ensureStudentData(response.jwt)
                 } else {
                     _appState.value = AppState.Error(
                         getApplication<Application>().getString(R.string.error_login_failed)

@@ -2,8 +2,10 @@ package org.abgehoben.xenon.data.repository
 
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.*
+import org.abgehoben.xenon.data.local.SessionManager
 import org.abgehoben.xenon.data.model.calendar.IcalType
 import org.abgehoben.xenon.data.model.calendar.ProcessedEvent
 import org.abgehoben.xenon.data.model.system.CacheStats
@@ -15,115 +17,75 @@ import org.abgehoben.xenon.data.remote.dto.calendar.CalendarEvent
 import org.abgehoben.xenon.data.remote.dto.calendar.CalendarResponse
 import org.abgehoben.xenon.data.remote.dto.rpc.ApiCallRequest
 import org.abgehoben.xenon.data.remote.dto.timetable.ClassHour
-import org.abgehoben.xenon.data.remote.dto.timetable.Course
-import org.abgehoben.xenon.data.remote.dto.timetable.Lesson
-import org.abgehoben.xenon.data.remote.dto.timetable.Substitution
 import org.abgehoben.xenon.data.repository.builder.TimetableGridBuilder
+import org.abgehoben.xenon.data.repository.cache.TimetableCache
+import org.abgehoben.xenon.data.repository.util.DateTimeParser
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 
-class TimetableRepository(private val api: SchulmanagerApi) {
+class TimetableRepository(
+    private val api: SchulmanagerApi,
+    private val sessionManager: SessionManager? = null
+) {
     companion object {
         private const val TAG = "TimetableRepo"
     }
 
     private val json = Json { ignoreUnknownKeys = true }
-    private val dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+    private val memoryCache = TimetableCache()
 
-    private val timetableCache = mutableMapOf<LocalDate, TimetableGrid>()
-    private var cachedMetadata: SchoolMetadata? = null
-    private var cachedCalendarEvents: Map<LocalDate, List<ProcessedEvent>>? = null
+    fun clearAllCache() = memoryCache.clear()
 
-    fun clearAllCache() {
-        timetableCache.clear()
-        cachedMetadata = null
-        cachedCalendarEvents = null
-    }
-
-    fun getCacheStats(): CacheStats {
-        val meta = cachedMetadata
-        return CacheStats(
-            cachedWeeksCount = timetableCache.size,
-            cachedCalendarDaysCount = cachedCalendarEvents?.size ?: 0,
-            classHoursCount = meta?.classHours?.size ?: 0,
-            coursesCount = meta?.courses?.size ?: 0,
-            teachersCount = meta?.teachers?.size ?: 0,
-            roomsCount = meta?.rooms?.size ?: 0
-        )
-    }
+    fun getCacheStats(): CacheStats = memoryCache.getStats()
 
     suspend fun getFullTimetable(token: String, monday: LocalDate, forceRefresh: Boolean = false): TimetableGrid {
-        if (!forceRefresh && timetableCache.containsKey(monday)) {
+        if (!forceRefresh && memoryCache.containsGrid(monday)) {
             Log.d(TAG, "Returning cached timetable for $monday")
-            return timetableCache[monday]!!
+            return memoryCache.getGrid(monday)!!
         }
 
-        val mondayStr = monday.format(dateFormatter)
-        val fridayStr = monday.plusDays(4).format(dateFormatter)
-        val calStartStr = monday.minusMonths(3).format(dateFormatter)
-        val calEndStr = monday.plusMonths(2).format(dateFormatter)
+        val mondayStr = monday.format(DateTimeParser.ISO_DATE_FORMATTER)
+        val sundayStr = monday.plusDays(6).format(DateTimeParser.ISO_DATE_FORMATTER)
+        val calStartStr = monday.minusMonths(3).format(DateTimeParser.ISO_DATE_FORMATTER)
+        val calEndStr = monday.plusMonths(2).format(DateTimeParser.ISO_DATE_FORMATTER)
+
+        val studentJson = resolveStudentObject(token)
 
         val dynamicRequests = mutableListOf(
-            ApiCallRequest("main", "poqa", buildJsonObject {
-                putJsonObject("action") {
-                    put("model", "main/lesson")
-                    put("action", "findAll")
-                    putJsonArray("parameters") {
-                        add(buildJsonObject {
-                            putJsonObject("where") {
-                                putJsonObject("start") { put("\$lte", fridayStr) }
-                                putJsonObject("end") { put("\$gte", mondayStr) }
-                            }
-                        })
+            ApiCallRequest(
+                moduleName = "schedules",
+                endpointName = "get-actual-lessons",
+                parameters = buildJsonObject {
+                    if (studentJson != null) {
+                        put("student", studentJson)
                     }
+                    put("start", mondayStr)
+                    put("end", sundayStr)
                 }
-            }),
-            ApiCallRequest("main", "poqa", buildJsonObject {
-                putJsonObject("action") {
-                    put("model", "main/substitution")
-                    put("action", "findAll")
-                    putJsonArray("parameters") {
-                        add(buildJsonObject {
-                            putJsonObject("where") {
-                                putJsonObject("date") {
-                                    put("\$gte", mondayStr)
-                                    put("\$lte", fridayStr)
-                                }
-                            }
-                            putJsonArray("include") {
-                                add(buildJsonObject { put("association", "course"); put("required", false) })
-                                add(buildJsonObject { put("association", "room"); put("required", false) })
-                                add(buildJsonObject { put("association", "teachers"); put("required", false) })
-                                add(buildJsonObject { put("association", "lessons"); put("required", false) })
-                            }
-                        })
-                    }
+            ),
+            ApiCallRequest(
+                moduleName = "calendar",
+                endpointName = "get-events-for-user",
+                parameters = buildJsonObject {
+                    put("start", calStartStr)
+                    put("end", calEndStr)
+                    put("includeHolidays", true)
                 }
-            }),
-            ApiCallRequest("calendar", "get-events-for-user", buildJsonObject {
-                put("start", calStartStr)
-                put("end", calEndStr)
-                put("includeHolidays", true)
-            })
+            )
         )
 
-        val metadataRequests = if (cachedMetadata == null) {
+        val metadataRequests = if (memoryCache.getMetadata() == null) {
             listOf(
-                ApiCallRequest("main", "poqa", buildJsonObject {
-                    putJsonObject("action") { put("model", "main/class-hour"); put("action", "findAll"); putJsonArray("parameters") { add(buildJsonObject {}) } }
-                }),
-                ApiCallRequest("main", "poqa", buildJsonObject {
-                    putJsonObject("action") { put("model", "main/course"); put("action", "findAll"); putJsonArray("parameters") { add(buildJsonObject {}) } }
-                }),
-                ApiCallRequest("main", "poqa", buildJsonObject {
-                    putJsonObject("action") { put("model", "main/room"); put("action", "findAll"); putJsonArray("parameters") { add(buildJsonObject {}) } }
-                }),
-                ApiCallRequest("main", "poqa", buildJsonObject {
-                    putJsonObject("action") { put("model", "main/teacher"); put("action", "findAll"); putJsonArray("parameters") { add(buildJsonObject {}) } }
-                }),
-                ApiCallRequest("main", "poqa", buildJsonObject {
-                    putJsonObject("action") { put("model", "main/teacher-course-attendance"); put("action", "findAll"); putJsonArray("parameters") { add(buildJsonObject {}) } }
-                })
+                ApiCallRequest(
+                    moduleName = "main",
+                    endpointName = "poqa",
+                    parameters = buildJsonObject {
+                        putJsonObject("action") {
+                            put("model", "main/class-hour")
+                            put("action", "findAll")
+                            putJsonArray("parameters") { add(buildJsonObject {}) }
+                        }
+                    }
+                )
             )
         } else emptyList()
 
@@ -134,54 +96,54 @@ class TimetableRepository(private val api: SchulmanagerApi) {
             val data = response.results.map { it.data ?: JsonNull }
 
             val grid = withContext(Dispatchers.Default) {
-                val lessons = data.getOrNull(0)?.takeIf { it !is JsonNull }?.let { json.decodeFromJsonElement<List<Lesson>>(it) } ?: emptyList()
-                val substitutions = data.getOrNull(1)?.takeIf { it !is JsonNull }?.let { json.decodeFromJsonElement<List<Substitution>>(it) } ?: emptyList()
-                val calendar = data.getOrNull(2)?.takeIf { it !is JsonNull }?.let { json.decodeFromJsonElement<CalendarResponse>(it) } ?: CalendarResponse()
+                val actualLessonsRaw = data.getOrNull(0)?.takeIf { it !is JsonNull }
+                val calendar = data.getOrNull(1)?.takeIf { it !is JsonNull }?.let {
+                    json.decodeFromJsonElement<CalendarResponse>(it)
+                } ?: CalendarResponse()
 
-                if (metadataRequests.isNotEmpty() && data.size >= 8) {
-                    val chList = data.getOrNull(3)?.takeIf { it !is JsonNull }?.let { json.decodeFromJsonElement<List<ClassHour>>(it) } ?: emptyList()
-                    val cList = data.getOrNull(4)?.takeIf { it !is JsonNull }?.let { json.decodeFromJsonElement<List<Course>>(it) } ?: emptyList()
+                if (metadataRequests.isNotEmpty() && data.size >= 3) {
+                    val chList = data.getOrNull(2)?.takeIf { it !is JsonNull }?.let {
+                        json.decodeFromJsonElement<List<ClassHour>>(it)
+                    } ?: emptyList()
 
-                    if (chList.isNotEmpty() && cList.isNotEmpty()) {
-                        cachedMetadata = SchoolMetadata(
-                            classHours = chList,
-                            courses = cList,
-                            rooms = data.getOrNull(5)?.takeIf { it !is JsonNull }?.let { json.decodeFromJsonElement(it) } ?: emptyList(),
-                            teachers = data.getOrNull(6)?.takeIf { it !is JsonNull }?.let { json.decodeFromJsonElement(it) } ?: emptyList(),
-                            tca = data.getOrNull(7)?.takeIf { it !is JsonNull }?.let { json.decodeFromJsonElement(it) } ?: emptyList()
+                    if (chList.isNotEmpty()) {
+                        memoryCache.putMetadata(
+                            SchoolMetadata(
+                                classHours = chList,
+                                courses = emptyList(),
+                                rooms = emptyList(),
+                                teachers = emptyList(),
+                                tca = emptyList()
+                            )
                         )
                     }
                 }
 
-                val meta = cachedMetadata ?: SchoolMetadata(emptyList(), emptyList(), emptyList(), emptyList(), emptyList())
+                val classHours = memoryCache.getMetadata()?.classHours ?: emptyList()
 
                 TimetableGridBuilder.build(
                     monday = monday,
-                    classHours = meta.classHours,
-                    coursesRaw = meta.courses,
-                    lessons = lessons,
-                    rooms = meta.rooms,
-                    teachers = meta.teachers,
-                    tca = meta.tca,
-                    subsRaw = substitutions,
+                    classHours = classHours,
+                    actualLessonsData = actualLessonsRaw,
                     calendar = calendar
                 )
             }
 
-            timetableCache[monday] = grid
+            memoryCache.putGrid(monday, grid)
             return grid
         } catch (e: Throwable) {
-            if (timetableCache.containsKey(monday)) {
+            if (memoryCache.containsGrid(monday)) {
                 Log.w(TAG, "Network failed, serving cached timetable for $monday")
-                return timetableCache[monday]!!
+                return memoryCache.getGrid(monday)!!
             }
             throw e
         }
     }
 
     suspend fun getCalendarEvents(token: String, forceRefresh: Boolean = false): Map<LocalDate, List<ProcessedEvent>> {
-        if (!forceRefresh && cachedCalendarEvents != null) {
-            return cachedCalendarEvents!!
+        if (!forceRefresh) {
+            val cached = memoryCache.getCalendarEvents()
+            if (cached != null) return cached
         }
 
         val today = LocalDate.now()
@@ -189,11 +151,15 @@ class TimetableRepository(private val api: SchulmanagerApi) {
         val endStr = if (today.monthValue >= 8) today.plusYears(1).withMonth(7).withDayOfMonth(31) else today.withMonth(7).withDayOfMonth(31)
 
         val requests = listOf(
-            ApiCallRequest("calendar", "get-events-for-user", buildJsonObject {
-                put("start", startStr.format(dateFormatter))
-                put("end", endStr.format(dateFormatter))
-                put("includeHolidays", true)
-            }),
+            ApiCallRequest(
+                moduleName = "calendar",
+                endpointName = "get-events-for-user",
+                parameters = buildJsonObject {
+                    put("start", startStr.format(DateTimeParser.ISO_DATE_FORMATTER))
+                    put("end", endStr.format(DateTimeParser.ISO_DATE_FORMATTER))
+                    put("includeHolidays", true)
+                }
+            ),
             ApiCallRequest("calendar", "get-event-categories", buildJsonObject {})
         )
 
@@ -212,8 +178,8 @@ class TimetableRepository(private val api: SchulmanagerApi) {
 
                 val eventsByDay = mutableMapOf<LocalDate, MutableList<ProcessedEvent>>()
                 allEvents.forEach { ev ->
-                    val startDt = TimetableGridBuilder.parseIsoLocal(ev.start ?: ev.startDate ?: "")
-                    val endDt = TimetableGridBuilder.parseIsoLocal(ev.end ?: ev.endDate ?: ev.start ?: "")
+                    val startDt = DateTimeParser.parseIsoLocal(ev.start ?: ev.startDate)
+                    val endDt = DateTimeParser.parseIsoLocal(ev.end ?: ev.endDate ?: ev.start)
 
                     if (startDt != null) {
                         val sDate = startDt.toLocalDate()
@@ -246,12 +212,13 @@ class TimetableRepository(private val api: SchulmanagerApi) {
                 eventsByDay
             }
 
-            cachedCalendarEvents = eventsMap
+            memoryCache.putCalendarEvents(eventsMap)
             return eventsMap
         } catch (e: Throwable) {
-            if (cachedCalendarEvents != null) {
+            val cached = memoryCache.getCalendarEvents()
+            if (cached != null) {
                 Log.w(TAG, "Network failed, serving cached calendar events")
-                return cachedCalendarEvents!!
+                return cached
             }
             throw e
         }
@@ -287,5 +254,52 @@ class TimetableRepository(private val api: SchulmanagerApi) {
             Log.e(TAG, "Failed to fetch iCal token for $type", e)
             null
         }
+    }
+
+    private suspend fun resolveStudentObject(token: String): JsonObject? {
+        // 1. Check if we already have the valid student (with classId) cached in DataStore
+        var studentJson: JsonObject? = runCatching {
+            sessionManager?.studentData?.firstOrNull()?.let { json.parseToJsonElement(it).jsonObject }
+        }.getOrNull()
+
+        // If cached object is a parent account (no classId), force re-resolve
+        if (studentJson != null && studentJson["classId"] != null) {
+            return studentJson
+        }
+
+        // 2. Fetch login-status and resolve student from associatedParents or associatedStudent
+        try {
+            val statusObj = api.getLoginStatus(token)
+            val userObj = statusObj?.get("user") as? JsonObject
+
+            //TODO: Still need to implement everything for multiple childs (including a way to switch between them)
+
+            // Case A: Student account -> user.associatedStudent
+            val directStudent = userObj?.get("associatedStudent") as? JsonObject
+
+            // Case B: Parent account -> user.associatedParents[0].student (exact path from your console output!)
+            val parentStudent = (userObj?.get("associatedParents") as? JsonArray)
+                ?.mapNotNull { (it as? JsonObject)?.get("student") as? JsonObject }
+                ?.firstOrNull()
+
+            // Case C: Plural array associatedStudents
+            val pluralStudent = (userObj?.get("associatedStudents") as? JsonArray)
+                ?.firstOrNull() as? JsonObject
+
+            val resolved = directStudent
+                ?: parentStudent
+                ?: pluralStudent
+                ?: userObj
+
+            if (resolved != null) {
+                studentJson = resolved
+                sessionManager?.saveStudentData(resolved.toString())
+                Log.d(TAG, "Successfully resolved active student dynamically: $resolved")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to resolve student from /api/login-status", e)
+        }
+
+        return studentJson
     }
 }
