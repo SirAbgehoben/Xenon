@@ -41,7 +41,6 @@ typealias SubstitutionSummary = org.abgehoben.xenon.data.model.timetable.Substit
 typealias SchoolMetadata = org.abgehoben.xenon.data.model.timetable.SchoolMetadata
 
 typealias ProcessedEvent = org.abgehoben.xenon.data.model.calendar.ProcessedEvent
-typealias IcalType = org.abgehoben.xenon.data.model.calendar.IcalType
 typealias CacheStats = org.abgehoben.xenon.data.model.system.CacheStats
 
 typealias TimetableRepository = org.abgehoben.xenon.data.repository.TimetableRepository

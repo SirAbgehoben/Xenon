@@ -350,9 +350,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         refreshData(forceRefresh = true)
     }
 
-    suspend fun fetchIcalUrl(type: IcalType, renew: Boolean = false): String? {
+    suspend fun fetchIcalUrl(renew: Boolean = false): String? {
         val token = (appState.value as? AppState.Authenticated)?.token ?: return null
-        return calendarRepository.getIcalUrl(token, type, renew)
+        return calendarRepository.getIcalUrl(token, renew)
     }
 
     fun getTimetableCacheStats(): CacheStats = timetableRepository.getCacheStats()

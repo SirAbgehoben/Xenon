@@ -4,7 +4,6 @@ import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.*
-import org.abgehoben.xenon.data.model.calendar.IcalType
 import org.abgehoben.xenon.data.model.calendar.ProcessedEvent
 import org.abgehoben.xenon.data.remote.SchulmanagerApi
 import org.abgehoben.xenon.data.remote.dto.calendar.CalendarCategory
@@ -149,15 +148,11 @@ class CalendarRepository(
         }
     }
 
-    //TODO there actualy is no ical for timetable
-    suspend fun getIcalUrl(token: String, type: IcalType, renew: Boolean = false): String? {
-        val moduleName = if (type == IcalType.TIMETABLE) "schedules" else "calendar"
-        val endpointName = if (type == IcalType.TIMETABLE) "get-schedules-ical-token" else "get-ical-token"
-        val urlPath = if (type == IcalType.TIMETABLE) "schedules" else "calendar"
+    suspend fun getIcalUrl(token: String, renew: Boolean = false): String? {
 
         val request = ApiCallRequest(
-            moduleName = moduleName,
-            endpointName = endpointName,
+            moduleName = "calendar",
+            endpointName = "get-ical-token",
             parameters = buildJsonObject { put("renew", renew) }
         )
 
@@ -172,12 +167,12 @@ class CalendarRepository(
             }
 
             if (!icalToken.isNullOrEmpty()) {
-                "https://login.schulmanager-online.de/ical/$urlPath/$icalToken"
+                "https://login.schulmanager-online.de/ical/calendar/$icalToken"
             } else {
                 null
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to fetch iCal token for $type", e)
+            Log.e(TAG, "Failed to fetch iCal token", e)
             null
         }
     }

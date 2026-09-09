@@ -23,7 +23,6 @@ import kotlinx.coroutines.launch
 import org.abgehoben.xenon.AppState
 import org.abgehoben.xenon.MainViewModel
 import org.abgehoben.xenon.R
-import org.abgehoben.xenon.data.IcalType
 import org.abgehoben.xenon.data.ThemeMode
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
@@ -48,7 +47,6 @@ fun SettingsScreen(viewModel: MainViewModel) {
     var showDebugDialog by remember { mutableStateOf(false) }
     var showIcalDialog by remember { mutableStateOf(false) }
 
-    var selectedIcalType by remember { mutableStateOf(IcalType.TIMETABLE) }
     var icalUrl by remember { mutableStateOf<String?>(null) }
     var isLoadingIcal by remember { mutableStateOf(false) }
 
@@ -303,9 +301,9 @@ fun SettingsScreen(viewModel: MainViewModel) {
 
     // iCal Feed Dialog
     if (showIcalDialog) {
-        LaunchedEffect(selectedIcalType) {
+        LaunchedEffect(Unit) {
             isLoadingIcal = true
-            icalUrl = viewModel.fetchIcalUrl(selectedIcalType, renew = false)
+            icalUrl = viewModel.fetchIcalUrl(renew = false)
             isLoadingIcal = false
         }
 
@@ -319,30 +317,8 @@ fun SettingsScreen(viewModel: MainViewModel) {
             },
             text = {
                 Column {
-                    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                        SegmentedButton(
-                            selected = selectedIcalType == IcalType.TIMETABLE,
-                            onClick = { selectedIcalType = IcalType.TIMETABLE },
-                            shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
-                        ) {
-                            Text(stringResource(R.string.ical_tab_timetable))
-                        }
-                        SegmentedButton(
-                            selected = selectedIcalType == IcalType.CALENDAR,
-                            onClick = { selectedIcalType = IcalType.CALENDAR },
-                            shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
-                        ) {
-                            Text(stringResource(R.string.ical_tab_calendar))
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(14.dp))
-
                     Text(
-                        text = stringResource(
-                            if (selectedIcalType == IcalType.TIMETABLE) R.string.ical_timetable_desc
-                            else R.string.ical_calendar_desc
-                        ),
+                        text = stringResource(R.string.ical_calendar_desc),
                         style = MaterialTheme.typography.bodyMedium
                     )
 
@@ -365,7 +341,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
                         onClick = {
                             scope.launch {
                                 isLoadingIcal = true
-                                icalUrl = viewModel.fetchIcalUrl(selectedIcalType, renew = true)
+                                icalUrl = viewModel.fetchIcalUrl(renew = true)
                                 isLoadingIcal = false
                                 Toast.makeText(context, icalTokenRotatedMsg, Toast.LENGTH_SHORT).show()
                             }
