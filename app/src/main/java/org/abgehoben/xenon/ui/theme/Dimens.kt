@@ -32,6 +32,11 @@ object Dimens {
     val ElevationLevel1 = 1.dp
     val ElevationLevel2 = 2.dp
 
+    // Header & Pill Control Tokens
+    val HeaderPillHeight = 40.dp
+    val PillPadding = 4.dp
+    val PillIndicatorSize = 32.dp
+
     // Heights & Sizes
     val ButtonHeightStandard = 56.dp
     val InputCornerRadius = 16.dp

@@ -5,7 +5,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ViewList
 import androidx.compose.material.icons.filled.ChevronLeft
@@ -20,7 +19,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import org.abgehoben.xenon.R
 import org.abgehoben.xenon.ui.theme.Dimens
 
@@ -48,20 +46,18 @@ fun TimetableTopBar(
         ) {
             // Calendar Week Navigator Pill
             Surface(
-                shape = RoundedCornerShape(Dimens.RadiusPill),
+                shape = CircleShape,
                 color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                tonalElevation = Dimens.ElevationLevel2
+                tonalElevation = Dimens.ElevationLevel2,
+                modifier = Modifier.height(Dimens.HeaderPillHeight)
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(
-                        horizontal = Dimens.SpacingExtraSmall,
-                        vertical = Dimens.SpacingHairline
-                    )
+                    modifier = Modifier.padding(horizontal = Dimens.PillPadding)
                 ) {
                     IconButton(
                         onClick = onPrevWeek,
-                        modifier = Modifier.size(Dimens.SpacingJumbo)
+                        modifier = Modifier.size(Dimens.PillIndicatorSize)
                     ) {
                         Icon(
                             imageVector = Icons.Default.ChevronLeft,
@@ -80,7 +76,7 @@ fun TimetableTopBar(
 
                     IconButton(
                         onClick = onNextWeek,
-                        modifier = Modifier.size(Dimens.SpacingJumbo)
+                        modifier = Modifier.size(Dimens.PillIndicatorSize)
                     ) {
                         Icon(
                             imageVector = Icons.Default.ChevronRight,
@@ -91,14 +87,15 @@ fun TimetableTopBar(
                 }
             }
 
-            // View Mode Selector (Grid vs List)
+            // View Mode Selector Pill (Grid vs List)
             Surface(
-                shape = RoundedCornerShape(Dimens.RadiusPill),
+                shape = CircleShape,
                 color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                tonalElevation = Dimens.ElevationLevel2
+                tonalElevation = Dimens.ElevationLevel2,
+                modifier = Modifier.height(Dimens.HeaderPillHeight)
             ) {
                 Row(
-                    modifier = Modifier.padding(3.dp),
+                    modifier = Modifier.padding(Dimens.PillPadding),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     val gridColor by animateColorAsState(
@@ -120,7 +117,7 @@ fun TimetableTopBar(
 
                     Box(
                         modifier = Modifier
-                            .size(34.dp)
+                            .size(Dimens.PillIndicatorSize)
                             .clip(CircleShape)
                             .background(gridColor)
                             .clickable { if (!isWeeklyView) onToggleViewMode() },
@@ -136,7 +133,7 @@ fun TimetableTopBar(
 
                     Box(
                         modifier = Modifier
-                            .size(34.dp)
+                            .size(Dimens.PillIndicatorSize)
                             .clip(CircleShape)
                             .background(listColor)
                             .clickable { if (isWeeklyView) onToggleViewMode() },
