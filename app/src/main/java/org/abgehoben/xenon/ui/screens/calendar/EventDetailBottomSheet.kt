@@ -15,7 +15,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import androidx.core.text.HtmlCompat
 import org.abgehoben.xenon.R
 import org.abgehoben.xenon.data.model.calendar.ProcessedEvent

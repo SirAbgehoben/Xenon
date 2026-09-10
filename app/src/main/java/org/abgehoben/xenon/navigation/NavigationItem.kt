@@ -8,14 +8,14 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.ui.graphics.vector.ImageVector
 import org.abgehoben.xenon.R
 
-sealed class Screen(
+sealed class NavigationItem(
     val route: String,
     @StringRes val labelRes: Int,
     val icon: ImageVector
 ) {
-    data object Timetable : Screen("timetable", R.string.nav_timetable, Icons.AutoMirrored.Filled.List)
-    data object Calendar : Screen("calendar", R.string.nav_calendar, Icons.Default.CalendarMonth)
-    data object Settings : Screen("settings", R.string.nav_settings, Icons.Default.Settings)
+    data object Timetable : NavigationItem("timetable", R.string.nav_timetable, Icons.AutoMirrored.Filled.List)
+    data object Calendar : NavigationItem("calendar", R.string.nav_calendar, Icons.Default.CalendarMonth)
+    data object Settings : NavigationItem("settings", R.string.nav_settings, Icons.Default.Settings)
 
     companion object {
         val bottomNavItems = listOf(Timetable, Calendar, Settings)

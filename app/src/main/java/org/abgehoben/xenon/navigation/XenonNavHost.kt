@@ -18,16 +18,16 @@ fun XenonNavHost(
 ) {
     NavHost(
         navController = navController,
-        startDestination = Screen.Timetable.route,
+        startDestination = NavigationItem.Timetable.route,
         modifier = modifier
     ) {
-        composable(Screen.Timetable.route) {
+        composable(NavigationItem.Timetable.route) {
             TimetableScreen(viewModel)
         }
-        composable(Screen.Calendar.route) {
+        composable(NavigationItem.Calendar.route) {
             CalendarScreen(viewModel)
         }
-        composable(Screen.Settings.route) {
+        composable(NavigationItem.Settings.route) {
             SettingsScreen(viewModel)
         }
     }

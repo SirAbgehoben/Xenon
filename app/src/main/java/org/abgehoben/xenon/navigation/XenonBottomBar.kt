@@ -18,7 +18,7 @@ fun XenonBottomBar(navController: NavController) {
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         val currentDestination = navBackStackEntry?.destination
 
-        Screen.bottomNavItems.forEach { screen ->
+        NavigationItem.bottomNavItems.forEach { screen ->
             NavigationBarItem(
                 icon = { Icon(screen.icon, contentDescription = null) },
                 label = { Text(stringResource(screen.labelRes)) },
