@@ -1,3 +1,4 @@
+// main/java/org/abgehoben/xenon/ui/screens/timetable/UntisWeeklyGrid.kt
 package org.abgehoben.xenon.ui.screens.timetable
 
 import androidx.compose.foundation.*
@@ -344,7 +345,7 @@ fun UntisGridCell(slot: TimetableSlot, span: Int = 1) {
                                     ),
                                     maxLines = if (span >= 2) 2 else 1,
                                     overflow = TextOverflow.Ellipsis,
-                                    color = if (isSubstitution && !slot.cancelled) Color(0xFF2E7D32) else MaterialTheme.colorScheme.onSurface
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                             }
                         }
@@ -357,7 +358,11 @@ fun UntisGridCell(slot: TimetableSlot, span: Int = 1) {
                                     fontWeight = FontWeight.Bold
                                 ),
                                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                                maxLines = 1
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier
+                                    .padding(start = 4.dp)
+                                    .widthIn(max = 38.dp)
                             )
                         }
                     }

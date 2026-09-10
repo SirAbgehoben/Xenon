@@ -45,10 +45,11 @@ fun LessonDetailsBottomSheet(
         DateTimeFormatter.ofPattern("E | dd.MM.yy", currentLocale)
     }
 
+    val isSubstitution = slot.substitution != null || slot.newRoom != null || slot.subRoom != null
     val accentColor = when {
         slot.isHoliday -> MaterialTheme.colorScheme.tertiary
-        slot.cancelled && slot.substitution == null -> MaterialTheme.colorScheme.error
-        slot.substitution != null || slot.newRoom != null || slot.subRoom != null -> Color(0xFF4CAF50)
+        slot.cancelled && !isSubstitution -> MaterialTheme.colorScheme.error
+        isSubstitution -> Color(0xFF4CAF50)
         else -> MaterialTheme.colorScheme.primary
     }
 
@@ -81,7 +82,7 @@ fun LessonDetailsBottomSheet(
                     )
                 }
             }
-            IconButton(onClick = { //TODO
+            IconButton(onClick = {
                 Log.e(TAG, "TODO: implement 3 dot button handling")
             }) {
                 Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.cd_options))
@@ -111,7 +112,7 @@ fun LessonDetailsBottomSheet(
                 fontWeight = FontWeight.Bold
             )
 
-            if (slot.substitution != null && !slot.cancelled) {
+            if (slot.substitution != null && !slot.cancelled && slot.substitution != slot.course) {
                 Text(
                     text = stringResource(R.string.regular_course_label, slot.course),
                     style = MaterialTheme.typography.bodyMedium,
@@ -138,7 +139,10 @@ fun LessonDetailsBottomSheet(
                 )
             }
 
-            if (slot.cancelled || slot.substitution != null || slot.newRoom != null) {
+            val effectiveNewRoom = slot.subRoom ?: slot.newRoom
+            val hasRealRoomChange = effectiveNewRoom != null && slot.room.isNotEmpty() && effectiveNewRoom != slot.room
+
+            if (slot.cancelled || isSubstitution || hasRealRoomChange) {
                 Spacer(modifier = Modifier.height(24.dp))
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                 Spacer(modifier = Modifier.height(16.dp))
@@ -152,23 +156,23 @@ fun LessonDetailsBottomSheet(
                     )
                     Spacer(modifier = Modifier.width(16.dp))
                     Column {
-                        val isReplacement = slot.substitution != null || slot.newRoom != null || slot.subRoom != null
+                        val isReplacement = isSubstitution || hasRealRoomChange
                         Text(
                             text = stringResource(if (isReplacement) R.string.substitution_title else R.string.lesson_cancelled),
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.Bold,
                             color = accentColor
                         )
-                        if (slot.substitution != null && slot.cancelled) {
+                        if (slot.substitution != null) {
                             Text(
                                 text = stringResource(R.string.replacement_prefix, slot.substitution),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.SemiBold
                             )
                         }
-                        if (slot.subRoom != null || slot.newRoom != null) {
+                        if (hasRealRoomChange) {
                             Text(
-                                text = stringResource(R.string.room_change_format, slot.room, slot.subRoom ?: slot.newRoom ?: ""),
+                                text = stringResource(R.string.room_change_format, slot.room, effectiveNewRoom),
                                 style = MaterialTheme.typography.bodyMedium
                             )
                         }
