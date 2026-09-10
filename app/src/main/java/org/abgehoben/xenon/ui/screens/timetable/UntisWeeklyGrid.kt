@@ -1,30 +1,29 @@
-// main/java/org/abgehoben/xenon/ui/screens/timetable/UntisWeeklyGrid.kt
 package org.abgehoben.xenon.ui.screens.timetable
 
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.abgehoben.xenon.R
-import org.abgehoben.xenon.data.MergedSlot
-import org.abgehoben.xenon.data.TimetableGrid
-import org.abgehoben.xenon.data.TimetableSlot
+import org.abgehoben.xenon.data.model.timetable.MergedSlot
+import org.abgehoben.xenon.data.model.timetable.TimetableGrid
+import org.abgehoben.xenon.data.model.timetable.TimetableSlot
+import org.abgehoben.xenon.ui.screens.timetable.components.LiveTimeIndicatorOverlay
+import org.abgehoben.xenon.ui.screens.timetable.components.calculateCurrentTimeYOffset
+import org.abgehoben.xenon.ui.screens.timetable.components.rememberLiveTime
+import org.abgehoben.xenon.ui.screens.timetable.util.TimetableLayoutUtils
+import org.abgehoben.xenon.ui.theme.Dimens
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
@@ -44,8 +43,6 @@ fun UntisWeeklyGrid(
         DateTimeFormatter.ofPattern("dd.MM.", currentLocale)
     }
 
-    val colWidth = 104.dp
-    val timeColWidth = 50.dp
     val totalHours = 9
     val classHours = grid.classHours
 
@@ -59,20 +56,18 @@ fun UntisWeeklyGrid(
     val dynamicOnPrimaryContainer = MaterialTheme.colorScheme.onPrimaryContainer
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // Pinned Header Row
         Surface(
             color = MaterialTheme.colorScheme.surfaceContainerLow,
-            tonalElevation = 1.dp
+            tonalElevation = Dimens.ElevationLevel1
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = BlockGap),
+                    .padding(vertical = Dimens.TimetableBlockGap),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Pinned "Per." / "Std." Column Header
                 Box(
-                    modifier = Modifier.width(timeColWidth),
+                    modifier = Modifier.width(Dimens.TimetableTimeColWidth),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
@@ -83,12 +78,11 @@ fun UntisWeeklyGrid(
                     )
                 }
 
-                Spacer(modifier = Modifier.width(BlockGap))
+                Spacer(modifier = Modifier.width(Dimens.TimetableBlockGap))
 
-                // Scrollable Day Header Pills
                 Row(
                     modifier = Modifier.horizontalScroll(hScrollState),
-                    horizontalArrangement = Arrangement.spacedBy(BlockGap)
+                    horizontalArrangement = Arrangement.spacedBy(Dimens.TimetableBlockGap)
                 ) {
                     for (i in 0..4) {
                         val date = grid.mondayDate.plusDays(i.toLong())
@@ -96,13 +90,13 @@ fun UntisWeeklyGrid(
                         val dayName = date.dayOfWeek.getDisplayName(TextStyle.SHORT, currentLocale)
 
                         Box(
-                            modifier = Modifier.width(colWidth),
+                            modifier = Modifier.width(Dimens.TimetableColWidth),
                             contentAlignment = Alignment.Center
                         ) {
                             Surface(
-                                shape = RoundedCornerShape(12.dp),
+                                shape = RoundedCornerShape(Dimens.RadiusMedium),
                                 color = if (isToday) dynamicPrimaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
-                                border = if (isToday) BorderStroke(1.5.dp, dynamicPrimary) else null,
+                                border = if (isToday) BorderStroke(Dimens.StrokeMedium, dynamicPrimary) else null,
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Column(
@@ -124,26 +118,28 @@ fun UntisWeeklyGrid(
                             }
                         }
                     }
-                    Spacer(modifier = Modifier.width(BlockGap))
+                    Spacer(modifier = Modifier.width(Dimens.TimetableBlockGap))
                 }
             }
         }
 
-        HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+        HorizontalDivider(
+            thickness = Dimens.StrokeThin,
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
+        )
 
-        // Body: Pinned Time Column + Scrollable Day Cards
         BoxWithConstraints(
             modifier = Modifier
                 .weight(1f)
-                .padding(top = BlockGap, bottom = BlockGap)
+                .padding(vertical = Dimens.TimetableBlockGap)
         ) {
             var totalGaps = 0.dp
             for (h in 1 until totalHours) {
-                val breakMin = getBreakMinutesAfter(h, classHours)
-                totalGaps += getBreakGapDp(breakMin, scaleBreaks)
+                val breakMin = TimetableLayoutUtils.getBreakMinutesAfter(h, classHours)
+                totalGaps += TimetableLayoutUtils.getBreakGapDp(breakMin, scaleBreaks)
             }
 
-            val baseHourHeight = maxOf(58.dp, (maxHeight - totalGaps) / totalHours)
+            val baseHourHeight = maxOf(Dimens.TimetableMinHourHeight, (maxHeight - totalGaps) / totalHours)
 
             val liveYOffset = remember(nowTime, baseHourHeight, scaleBreaks) {
                 calculateCurrentTimeYOffset(nowTime, totalHours, classHours, baseHourHeight, scaleBreaks)
@@ -151,10 +147,9 @@ fun UntisWeeklyGrid(
 
             Box(modifier = Modifier.fillMaxSize().verticalScroll(vScrollState)) {
                 Row(modifier = Modifier.fillMaxWidth()) {
-                    // Pinned Timing Column on the left
-                    Column(modifier = Modifier.width(timeColWidth)) {
+                    Column(modifier = Modifier.width(Dimens.TimetableTimeColWidth)) {
                         for (h in 1..totalHours) {
-                            val (startTime, endTime) = getTimeRangeForHour(h, classHours)
+                            val (startTime, endTime) = TimetableLayoutUtils.getTimeRangeForHour(h, classHours)
                             Box(
                                 modifier = Modifier
                                     .height(baseHourHeight)
@@ -175,7 +170,7 @@ fun UntisWeeklyGrid(
                                             )
                                         }
                                     }
-                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Spacer(modifier = Modifier.height(Dimens.SpacingHairline))
                                     Text(
                                         text = "$startTime\n$endTime",
                                         style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp, lineHeight = 9.5.sp),
@@ -186,27 +181,26 @@ fun UntisWeeklyGrid(
                             }
 
                             if (h < totalHours) {
-                                val breakMin = getBreakMinutesAfter(h, classHours)
-                                Spacer(modifier = Modifier.height(getBreakGapDp(breakMin, scaleBreaks)))
+                                val breakMin = TimetableLayoutUtils.getBreakMinutesAfter(h, classHours)
+                                Spacer(modifier = Modifier.height(TimetableLayoutUtils.getBreakGapDp(breakMin, scaleBreaks)))
                             }
                         }
                     }
 
-                    Spacer(modifier = Modifier.width(BlockGap))
+                    Spacer(modifier = Modifier.width(Dimens.TimetableBlockGap))
 
-                    // Scrollable Day Columns
                     Box(modifier = Modifier.horizontalScroll(hScrollState)) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(BlockGap)) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(Dimens.TimetableBlockGap)) {
                             for (d in 1..5) {
                                 val daySlots = grid.grid[d] ?: emptyMap()
-                                val mergedSlots = getMergedSlotsForDay(daySlots, totalHours, mergeLessons)
+                                val mergedSlots = TimetableLayoutUtils.getMergedSlotsForDay(daySlots, totalHours, mergeLessons)
 
-                                Column(modifier = Modifier.width(colWidth)) {
+                                Column(modifier = Modifier.width(Dimens.TimetableColWidth)) {
                                     for (merged in mergedSlots) {
                                         var blockHeight = baseHourHeight * merged.span
                                         for (i in merged.startHour until (merged.startHour + merged.span - 1)) {
-                                            val breakMin = getBreakMinutesAfter(i, classHours)
-                                            blockHeight += getBreakGapDp(breakMin, scaleBreaks)
+                                            val breakMin = TimetableLayoutUtils.getBreakMinutesAfter(i, classHours)
+                                            blockHeight += TimetableLayoutUtils.getBreakGapDp(breakMin, scaleBreaks)
                                         }
 
                                         Box(
@@ -223,175 +217,24 @@ fun UntisWeeklyGrid(
                                         }
 
                                         if (merged.endHour < totalHours) {
-                                            val breakMin = getBreakMinutesAfter(merged.endHour, classHours)
-                                            Spacer(modifier = Modifier.height(getBreakGapDp(breakMin, scaleBreaks)))
+                                            val breakMin = TimetableLayoutUtils.getBreakMinutesAfter(merged.endHour, classHours)
+                                            Spacer(modifier = Modifier.height(TimetableLayoutUtils.getBreakGapDp(breakMin, scaleBreaks)))
                                         }
                                     }
                                 }
                             }
-                            Spacer(modifier = Modifier.width(BlockGap))
+                            Spacer(modifier = Modifier.width(Dimens.TimetableBlockGap))
                         }
 
                         if (isCurrentWeek && liveYOffset != null) {
                             LiveTimeIndicatorOverlay(
                                 yOffset = liveYOffset,
                                 currentDayIndex = currentDayIndex,
-                                colWidth = colWidth,
-                                blockGap = BlockGap,
+                                colWidth = Dimens.TimetableColWidth,
+                                blockGap = Dimens.TimetableBlockGap,
                                 lineColor = dynamicPrimary,
                                 modifier = Modifier.matchParentSize()
                             )
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun UntisGridCell(slot: TimetableSlot, span: Int = 1) {
-    val isSubstitution = slot.substitution != null || slot.newRoom != null || slot.subRoom != null
-
-    val accentColor = when {
-        slot.isHoliday -> MaterialTheme.colorScheme.tertiary
-        slot.cancelled && !isSubstitution -> MaterialTheme.colorScheme.error
-        isSubstitution -> Color(0xFF4CAF50)
-        else -> MaterialTheme.colorScheme.primary
-    }
-
-    val bgColor = when {
-        slot.isHoliday -> MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.35f)
-        slot.cancelled && !isSubstitution -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.45f)
-        isSubstitution -> MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f)
-        else -> MaterialTheme.colorScheme.surfaceContainerHigh
-    }
-
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        shape = RoundedCornerShape(12.dp),
-        color = bgColor,
-        tonalElevation = 1.dp
-    ) {
-        if (slot.isHoliday) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(8.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    if (span >= 2) {
-                        Icon(
-                            Icons.Default.CalendarToday,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onTertiaryContainer,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.height(6.dp))
-                    }
-                    Text(
-                        text = slot.course,
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            fontSize = if (span >= 2) 11.5.sp else 9.sp,
-                            fontWeight = FontWeight.Black
-                        ),
-                        color = MaterialTheme.colorScheme.onTertiaryContainer,
-                        textAlign = TextAlign.Center,
-                        maxLines = if (span >= 2) 4 else 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-            }
-        } else {
-            Row(modifier = Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .padding(start = 4.dp)
-                        .width(3.5.dp)
-                        .fillMaxHeight(0.75f)
-                        .clip(CircleShape)
-                        .background(accentColor)
-                )
-
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(horizontal = 6.dp, vertical = if (span >= 2) 8.dp else 4.dp),
-                    verticalArrangement = if (span >= 2) Arrangement.SpaceEvenly else Arrangement.SpaceBetween
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.Top
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            if (slot.cancelled) {
-                                Text(
-                                    text = stringResource(R.string.cancelled_prefix, slot.course),
-                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.5.sp, fontWeight = FontWeight.Bold),
-                                    color = MaterialTheme.colorScheme.error,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-                            val displayText = slot.substitution ?: if (!slot.cancelled) slot.course else null
-                            if (displayText != null) {
-                                Text(
-                                    text = displayText,
-                                    style = MaterialTheme.typography.labelSmall.copy(
-                                        fontSize = if (span >= 2) 11.sp else 9.5.sp,
-                                        fontWeight = FontWeight.Black
-                                    ),
-                                    maxLines = if (span >= 2) 2 else 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                            }
-                        }
-
-                        if (slot.teacher.isNotEmpty()) {
-                            Text(
-                                text = slot.teacher,
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    fontSize = if (span >= 2) 9.5.sp else 8.sp,
-                                    fontWeight = FontWeight.Bold
-                                ),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier
-                                    .padding(start = 4.dp)
-                                    .widthIn(max = 38.dp)
-                            )
-                        }
-                    }
-
-                    val rName = slot.subRoom ?: slot.newRoom ?: slot.room
-                    if (rName.isNotEmpty()) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = rName,
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    fontSize = if (span >= 2) 10.5.sp else 9.sp,
-                                    fontWeight = FontWeight.Black
-                                ),
-                                color = if (slot.newRoom != null || slot.subRoom != null) accentColor else MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-
-                            if (span >= 2) {
-                                Text(
-                                    text = stringResource(R.string.periods_count, span),
-                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.5.sp, fontWeight = FontWeight.Bold),
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                                )
-                            }
                         }
                     }
                 }

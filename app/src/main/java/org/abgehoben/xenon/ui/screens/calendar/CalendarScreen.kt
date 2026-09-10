@@ -16,8 +16,9 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import org.abgehoben.xenon.MainViewModel
 import org.abgehoben.xenon.R
-import org.abgehoben.xenon.data.ProcessedEvent
+import org.abgehoben.xenon.data.model.calendar.ProcessedEvent
 import org.abgehoben.xenon.ui.components.SyncErrorState
+import org.abgehoben.xenon.ui.theme.Dimens
 import java.time.LocalDate
 import java.time.YearMonth
 
@@ -38,7 +39,12 @@ fun CalendarScreen(viewModel: MainViewModel) {
     val pullToRefreshState = rememberPullToRefreshState()
 
     Scaffold(
-        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        contentWindowInsets = WindowInsets(
+            Dimens.SpacingNone,
+            Dimens.SpacingNone,
+            Dimens.SpacingNone,
+            Dimens.SpacingNone
+        ),
         topBar = {
             Surface(
                 color = MaterialTheme.colorScheme.surface,
@@ -81,7 +87,7 @@ fun CalendarScreen(viewModel: MainViewModel) {
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(bottom = 32.dp)
+                    contentPadding = PaddingValues(bottom = Dimens.SpacingJumbo)
                 ) {
                     item {
                         CalendarGrid(
@@ -94,19 +100,22 @@ fun CalendarScreen(viewModel: MainViewModel) {
 
                     item {
                         HorizontalDivider(
-                            modifier = Modifier.padding(top = 12.dp, bottom = 6.dp),
-                            thickness = 0.5.dp,
+                            modifier = Modifier.padding(
+                                top = Dimens.SpacingMedium,
+                                bottom = Dimens.SpacingSmall
+                            ),
+                            thickness = Dimens.StrokeThin,
                             color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
                         )
                     }
 
-                    val events = eventsByDay[selectedDate] ?: emptyList()
+                    val events = eventsByDay[selectedDate].orEmpty()
                     if (events.isEmpty()) {
                         item {
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(32.dp),
+                                    .padding(Dimens.SpacingJumbo),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
@@ -118,7 +127,12 @@ fun CalendarScreen(viewModel: MainViewModel) {
                         }
                     } else {
                         items(events) { event ->
-                            Box(modifier = Modifier.padding(horizontal = 14.dp, vertical = 4.dp)) {
+                            Box(
+                                modifier = Modifier.padding(
+                                    horizontal = Dimens.SpacingNormal,
+                                    vertical = Dimens.SpacingExtraSmall
+                                )
+                            ) {
                                 EventListItem(event = event, onClick = { selectedEvent = event })
                             }
                         }
@@ -133,7 +147,10 @@ fun CalendarScreen(viewModel: MainViewModel) {
                 sheetState = sheetState,
                 dragHandle = null,
                 containerColor = MaterialTheme.colorScheme.surface,
-                shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+                shape = RoundedCornerShape(
+                    topStart = Dimens.RadiusDialog,
+                    topEnd = Dimens.RadiusDialog
+                )
             ) {
                 EventDetailsBottomSheet(
                     event = selectedEvent!!,

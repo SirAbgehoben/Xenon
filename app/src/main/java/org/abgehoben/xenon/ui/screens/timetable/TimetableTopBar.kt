@@ -22,6 +22,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.abgehoben.xenon.R
+import org.abgehoben.xenon.ui.theme.Dimens
 
 @Composable
 fun TimetableTopBar(
@@ -41,27 +42,31 @@ fun TimetableTopBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 6.dp),
+                .padding(horizontal = Dimens.SpacingLarge, vertical = Dimens.SpacingSmall),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Calendar Week Navigator Pill
             Surface(
-                shape = RoundedCornerShape(18.dp),
+                shape = RoundedCornerShape(Dimens.RadiusPill),
                 color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                tonalElevation = 2.dp
+                tonalElevation = Dimens.ElevationLevel2
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                    modifier = Modifier.padding(
+                        horizontal = Dimens.SpacingExtraSmall,
+                        vertical = Dimens.SpacingHairline
+                    )
                 ) {
                     IconButton(
                         onClick = onPrevWeek,
-                        modifier = Modifier.size(32.dp)
+                        modifier = Modifier.size(Dimens.SpacingJumbo)
                     ) {
                         Icon(
-                            Icons.Default.ChevronLeft,
+                            imageVector = Icons.Default.ChevronLeft,
                             contentDescription = stringResource(R.string.cd_prev_week),
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(Dimens.ActionIconSize)
                         )
                     }
 
@@ -69,36 +74,49 @@ fun TimetableTopBar(
                         text = stringResource(R.string.calendar_week_format, calWeek, weekType),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Black,
-                        modifier = Modifier.padding(horizontal = 8.dp),
+                        modifier = Modifier.padding(horizontal = Dimens.SpacingStandard),
                         color = MaterialTheme.colorScheme.onSurface
                     )
 
                     IconButton(
                         onClick = onNextWeek,
-                        modifier = Modifier.size(32.dp)
+                        modifier = Modifier.size(Dimens.SpacingJumbo)
                     ) {
                         Icon(
-                            Icons.Default.ChevronRight,
+                            imageVector = Icons.Default.ChevronRight,
                             contentDescription = stringResource(R.string.cd_next_week),
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(Dimens.ActionIconSize)
                         )
                     }
                 }
             }
 
+            // View Mode Selector (Grid vs List)
             Surface(
-                shape = RoundedCornerShape(18.dp),
+                shape = RoundedCornerShape(Dimens.RadiusPill),
                 color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                tonalElevation = 2.dp
+                tonalElevation = Dimens.ElevationLevel2
             ) {
                 Row(
                     modifier = Modifier.padding(3.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    val gridColor by animateColorAsState(if (isWeeklyView) MaterialTheme.colorScheme.primary else Color.Transparent, label = "gridColor")
-                    val gridIconColor by animateColorAsState(if (isWeeklyView) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant, label = "gridIconColor")
-                    val listColor by animateColorAsState(if (!isWeeklyView) MaterialTheme.colorScheme.primary else Color.Transparent, label = "listColor")
-                    val listIconColor by animateColorAsState(if (!isWeeklyView) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant, label = "listIconColor")
+                    val gridColor by animateColorAsState(
+                        targetValue = if (isWeeklyView) MaterialTheme.colorScheme.primary else Color.Transparent,
+                        label = "gridColor"
+                    )
+                    val gridIconColor by animateColorAsState(
+                        targetValue = if (isWeeklyView) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        label = "gridIconColor"
+                    )
+                    val listColor by animateColorAsState(
+                        targetValue = if (!isWeeklyView) MaterialTheme.colorScheme.primary else Color.Transparent,
+                        label = "listColor"
+                    )
+                    val listIconColor by animateColorAsState(
+                        targetValue = if (!isWeeklyView) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        label = "listIconColor"
+                    )
 
                     Box(
                         modifier = Modifier
@@ -109,10 +127,10 @@ fun TimetableTopBar(
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            Icons.Default.GridView,
+                            imageVector = Icons.Default.GridView,
                             contentDescription = stringResource(R.string.cd_week_view),
                             tint = gridIconColor,
-                            modifier = Modifier.size(17.dp)
+                            modifier = Modifier.size(Dimens.BottomBarIconSize)
                         )
                     }
 
@@ -125,10 +143,10 @@ fun TimetableTopBar(
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            Icons.AutoMirrored.Filled.ViewList,
+                            imageVector = Icons.AutoMirrored.Filled.ViewList,
                             contentDescription = stringResource(R.string.cd_day_view),
                             tint = listIconColor,
-                            modifier = Modifier.size(17.dp)
+                            modifier = Modifier.size(Dimens.BottomBarIconSize)
                         )
                     }
                 }

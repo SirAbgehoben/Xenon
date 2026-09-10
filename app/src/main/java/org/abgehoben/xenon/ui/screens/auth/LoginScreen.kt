@@ -1,4 +1,4 @@
-package org.abgehoben.xenon.ui.screens
+package org.abgehoben.xenon.ui.screens.auth
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -10,8 +10,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.unit.dp
 import org.abgehoben.xenon.R
+import org.abgehoben.xenon.ui.theme.Dimens
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -23,7 +23,12 @@ fun LoginScreen(
     var password by rememberSaveable { mutableStateOf("") }
 
     Scaffold(
-        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        contentWindowInsets = WindowInsets(
+            Dimens.SpacingNone,
+            Dimens.SpacingNone,
+            Dimens.SpacingNone,
+            Dimens.SpacingNone
+        ),
         topBar = {
             TopAppBar(
                 title = {
@@ -41,13 +46,13 @@ fun LoginScreen(
             modifier = Modifier
                 .padding(innerPadding)
                 .fillMaxSize()
-                .padding(horizontal = 24.dp),
+                .padding(horizontal = Dimens.SpacingExtraLarge),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(Dimens.SpacingMedium))
 
             Surface(
-                shape = RoundedCornerShape(20.dp),
+                shape = RoundedCornerShape(Dimens.RadiusCard),
                 color = MaterialTheme.colorScheme.surfaceContainerHigh,
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -55,22 +60,22 @@ fun LoginScreen(
                     text = stringResource(R.string.login_description),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(20.dp)
+                    modifier = Modifier.padding(Dimens.SpacingCard)
                 )
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(Dimens.SpacingExtraLarge))
 
             OutlinedTextField(
                 value = username,
                 onValueChange = { username = it },
                 label = { Text(stringResource(R.string.login_username_label)) },
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(Dimens.InputCornerRadius),
                 singleLine = true
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(Dimens.SpacingLarge))
 
             OutlinedTextField(
                 value = password,
@@ -78,20 +83,20 @@ fun LoginScreen(
                 label = { Text(stringResource(R.string.login_password_label)) },
                 visualTransformation = PasswordVisualTransformation(),
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(Dimens.InputCornerRadius),
                 singleLine = true
             )
 
             if (error != null) {
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(Dimens.SpacingLarge))
                 Surface(
-                    shape = RoundedCornerShape(14.dp),
+                    shape = RoundedCornerShape(Dimens.RadiusStandard),
                     color = MaterialTheme.colorScheme.errorContainer,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
                         text = error,
-                        modifier = Modifier.padding(14.dp),
+                        modifier = Modifier.padding(Dimens.SpacingNormal),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onErrorContainer
                     )
@@ -104,8 +109,8 @@ fun LoginScreen(
                 onClick = { onLogin(username, password) },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp),
-                shape = RoundedCornerShape(18.dp)
+                    .height(Dimens.ButtonHeightStandard),
+                shape = RoundedCornerShape(Dimens.RadiusPill)
             ) {
                 Text(
                     text = stringResource(R.string.login_button),
@@ -114,7 +119,7 @@ fun LoginScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(28.dp))
+            Spacer(modifier = Modifier.height(Dimens.RadiusExtraLarge))
         }
     }
 }

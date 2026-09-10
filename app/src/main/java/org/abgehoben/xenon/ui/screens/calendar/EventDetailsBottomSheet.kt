@@ -6,7 +6,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -19,7 +18,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.text.HtmlCompat
 import org.abgehoben.xenon.R
-import org.abgehoben.xenon.data.ProcessedEvent
+import org.abgehoben.xenon.data.model.calendar.ProcessedEvent
+import org.abgehoben.xenon.ui.theme.Dimens
 import java.time.format.DateTimeFormatter
 
 @Composable
@@ -37,12 +37,12 @@ fun EventDetailsBottomSheet(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(bottom = 32.dp)
+            .padding(bottom = Dimens.SpacingJumbo)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 4.dp),
+                .padding(horizontal = Dimens.SpacingStandard, vertical = Dimens.SpacingExtraSmall),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
@@ -69,21 +69,20 @@ fun EventDetailsBottomSheet(
                 )
             }
 
-            IconButton(onClick = {}) {
-                Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.cd_options))
-            }
+            // Keep spacer to balance the close button
+            Spacer(modifier = Modifier.size(Dimens.IconSizeLarge))
         }
 
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(4.dp)
+                .height(Dimens.SpacingExtraSmall)
                 .background(accentColor)
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(Dimens.SpacingLarge))
 
-        Column(modifier = Modifier.padding(horizontal = 24.dp)) {
+        Column(modifier = Modifier.padding(horizontal = Dimens.SpacingExtraLarge)) {
             Text(
                 text = event.title,
                 style = MaterialTheme.typography.headlineSmall,
@@ -91,7 +90,7 @@ fun EventDetailsBottomSheet(
             )
 
             if (event.category.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(2.dp))
+                Spacer(modifier = Modifier.height(Dimens.SpacingHairline))
                 Text(
                     text = event.category,
                     style = MaterialTheme.typography.titleMedium,
@@ -100,46 +99,46 @@ fun EventDetailsBottomSheet(
             }
 
             if (event.location.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(Dimens.SpacingNormal))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         Icons.Default.LocationOn,
                         contentDescription = null,
-                        modifier = Modifier.size(20.dp),
+                        modifier = Modifier.size(Dimens.IconSizeMedium),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(Dimens.SpacingStandard))
                     Text(text = event.location, style = MaterialTheme.typography.bodyLarge)
                 }
             }
 
             if (event.organizer.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(Dimens.SpacingStandard))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         Icons.Default.Person,
                         contentDescription = null,
-                        modifier = Modifier.size(20.dp),
+                        modifier = Modifier.size(Dimens.IconSizeMedium),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(Dimens.SpacingStandard))
                     Text(text = event.organizer, style = MaterialTheme.typography.bodyLarge)
                 }
             }
 
             if (event.description.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(Dimens.SpacingLarge))
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(Dimens.SpacingLarge))
 
                 Row {
                     Icon(
                         Icons.Default.Info,
                         contentDescription = null,
-                        modifier = Modifier.size(20.dp),
+                        modifier = Modifier.size(Dimens.IconSizeMedium),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(Dimens.SpacingStandard))
                     val cleanText = remember(event.description) {
                         HtmlCompat.fromHtml(event.description, HtmlCompat.FROM_HTML_MODE_COMPACT).toString().trim()
                     }

@@ -18,9 +18,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.abgehoben.xenon.R
-import org.abgehoben.xenon.data.ClassHour
-import org.abgehoben.xenon.data.MergedSlot
-import org.abgehoben.xenon.data.TimetableSlot
+import org.abgehoben.xenon.data.model.timetable.MergedSlot
+import org.abgehoben.xenon.data.model.timetable.TimetableSlot
+import org.abgehoben.xenon.data.remote.dto.timetable.ClassHour
+import org.abgehoben.xenon.ui.screens.timetable.util.TimetableLayoutUtils.getTimeRangeForHour
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 

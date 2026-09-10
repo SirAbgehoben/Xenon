@@ -1,24 +1,16 @@
 package org.abgehoben.xenon.ui.screens.calendar
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import org.abgehoben.xenon.data.ProcessedEvent
+import org.abgehoben.xenon.data.model.calendar.ProcessedEvent
+import org.abgehoben.xenon.ui.theme.Dimens
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
@@ -29,12 +21,11 @@ fun CalendarGrid(
     currentMonth: YearMonth,
     selectedDate: LocalDate,
     eventsByDay: Map<LocalDate, List<ProcessedEvent>>,
-    onDateSelected: (LocalDate) -> Unit
+    onDateSelected: (LocalDate) -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    val daysInMonth = currentMonth.lengthOfMonth()
-    val startPadding = currentMonth.atDay(1).dayOfWeek.value - 1
-
     val currentLocale = LocalConfiguration.current.locales[0]
+
     val dayHeaders = remember(currentLocale) {
         listOf(
             DayOfWeek.MONDAY,
@@ -47,7 +38,19 @@ fun CalendarGrid(
         ).map { it.getDisplayName(TextStyle.SHORT, currentLocale) }
     }
 
-    Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)) {
+    val today = remember { LocalDate.now() }
+    val daysInMonth = currentMonth.lengthOfMonth()
+    val startPadding = currentMonth.atDay(1).dayOfWeek.value - 1
+    val totalCells = daysInMonth + startPadding
+    val rowCount = (totalCells + 6) / 7
+
+    Column(
+        modifier = modifier.padding(
+            horizontal = Dimens.SpacingNormal,
+            vertical = Dimens.SpacingSmall
+        )
+    ) {
+        // Weekday abbreviations (Mon - Sun)
         Row(modifier = Modifier.fillMaxWidth()) {
             dayHeaders.forEach { dayName ->
                 Text(
@@ -61,12 +64,9 @@ fun CalendarGrid(
             }
         }
 
-        Spacer(modifier = Modifier.height(6.dp))
+        Spacer(modifier = Modifier.height(Dimens.SpacingSmall))
 
-        val totalCells = daysInMonth + startPadding
-        val rows = (totalCells + 6) / 7
-
-        for (row in 0 until rows) {
+        for (row in 0 until rowCount) {
             Row(modifier = Modifier.fillMaxWidth()) {
                 for (col in 0 until 7) {
                     val cellIndex = row * 7 + col
@@ -74,55 +74,17 @@ fun CalendarGrid(
 
                     if (dayNum in 1..daysInMonth) {
                         val date = currentMonth.atDay(dayNum)
-                        val isSelected = date == selectedDate
-                        val isToday = date == LocalDate.now()
-                        val dayEvents = eventsByDay[date] ?: emptyList()
-                        val hasHoliday = dayEvents.any { it.isHoliday }
+                        val dayEvents = eventsByDay[date].orEmpty()
 
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .aspectRatio(1f)
-                                .padding(2.dp)
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(
-                                    when {
-                                        isSelected -> MaterialTheme.colorScheme.primary
-                                        isToday -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f)
-                                        else -> Color.Transparent
-                                    }
-                                )
-                                .clickable { onDateSelected(date) },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center
-                            ) {
-                                Text(
-                                    text = dayNum.toString(),
-                                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
-                                    fontWeight = if (isToday || isSelected) FontWeight.Black else FontWeight.Medium,
-                                    color = when {
-                                        isSelected -> MaterialTheme.colorScheme.onPrimary
-                                        isToday -> MaterialTheme.colorScheme.onPrimaryContainer
-                                        else -> MaterialTheme.colorScheme.onSurface
-                                    }
-                                )
-                                if (dayEvents.isNotEmpty() && !isSelected) {
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Box(
-                                        modifier = Modifier
-                                            .size(4.dp)
-                                            .clip(CircleShape)
-                                            .background(
-                                                if (hasHoliday) MaterialTheme.colorScheme.tertiary
-                                                else MaterialTheme.colorScheme.primary
-                                            )
-                                    )
-                                }
-                            }
-                        }
+                        CalendarDayCell(
+                            date = date,
+                            isSelected = date == selectedDate,
+                            isToday = date == today,
+                            hasEvents = dayEvents.isNotEmpty(),
+                            hasHoliday = dayEvents.any { it.isHoliday },
+                            onDateSelected = onDateSelected,
+                            modifier = Modifier.weight(1f)
+                        )
                     } else {
                         Spacer(modifier = Modifier.weight(1f))
                     }

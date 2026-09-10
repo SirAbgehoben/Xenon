@@ -1,4 +1,4 @@
-package org.abgehoben.xenon.ui.screens.settings
+package org.abgehoben.xenon.ui.screens.settings.dialogs
 
 import android.os.Build
 import android.widget.Toast
@@ -13,7 +13,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -24,7 +23,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 import org.abgehoben.xenon.R
-import org.abgehoben.xenon.data.CacheStats
+import org.abgehoben.xenon.data.model.system.CacheStats
+import org.abgehoben.xenon.ui.theme.Dimens
+import org.abgehoben.xenon.ui.theme.StatusSuccess
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -46,7 +47,6 @@ fun DebugDialog(
     var isPinging by remember { mutableStateOf(false) }
     var pingResult by remember { mutableStateOf<Pair<Boolean, Long>?>(null) }
 
-    // Parse expiration timestamp from JWT claims
     val expInfo = remember(decodedJwtJson) {
         try {
             val expRegex = """"exp"\s*:\s*(\d+)""".toRegex()
@@ -88,14 +88,17 @@ fun DebugDialog(
                     )
                 }
                 Surface(
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(Dimens.RadiusExtraSmall),
                     color = MaterialTheme.colorScheme.tertiaryContainer
                 ) {
                     Text(
                         text = "DEBUG",
                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Black),
                         color = MaterialTheme.colorScheme.onTertiaryContainer,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        modifier = Modifier.padding(
+                            horizontal = Dimens.SpacingSmall,
+                            vertical = Dimens.SpacingHairline
+                        )
                     )
                 }
             }
@@ -105,17 +108,17 @@ fun DebugDialog(
                 modifier = Modifier
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
+                verticalArrangement = Arrangement.spacedBy(Dimens.SpacingNormal)
             ) {
-                // SECTION: Timetable Loading Time
+                // Section: Schedule Load Time
                 Surface(
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(Dimens.RadiusLarge),
                     color = MaterialTheme.colorScheme.surfaceContainerHigh
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(14.dp),
+                            .padding(Dimens.SpacingNormal),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
@@ -125,7 +128,7 @@ fun DebugDialog(
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold
                             )
-                            Spacer(modifier = Modifier.height(2.dp))
+                            Spacer(modifier = Modifier.height(Dimens.SpacingHairline))
                             Text(
                                 text = if (lastScheduleLoadDurationMs != null) {
                                     "Fetched in ${lastScheduleLoadDurationMs} ms"
@@ -133,36 +136,39 @@ fun DebugDialog(
                                     "Not loaded in this session"
                                 },
                                 style = MaterialTheme.typography.bodySmall,
-                                color = if (lastScheduleLoadDurationMs != null) Color(0xFF4CAF50) else MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = if (lastScheduleLoadDurationMs != null) StatusSuccess else MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontWeight = FontWeight.SemiBold
                             )
                         }
 
                         if (lastScheduleLoadDurationMs != null) {
                             Surface(
-                                shape = RoundedCornerShape(8.dp),
+                                shape = RoundedCornerShape(Dimens.RadiusExtraSmall),
                                 color = MaterialTheme.colorScheme.secondaryContainer
                             ) {
                                 Text(
                                     text = "${lastScheduleLoadDurationMs}ms",
                                     style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
                                     color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                    modifier = Modifier.padding(
+                                        horizontal = Dimens.SpacingStandard,
+                                        vertical = Dimens.SpacingExtraSmall
+                                    )
                                 )
                             }
                         }
                     }
                 }
 
-                // SECTION: Live Server Ping
+                // Section: Server Ping
                 Surface(
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(Dimens.RadiusLarge),
                     color = MaterialTheme.colorScheme.surfaceContainerHigh
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(14.dp),
+                            .padding(Dimens.SpacingNormal),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
@@ -180,7 +186,7 @@ fun DebugDialog(
                             }
                             val statusColor = when {
                                 isPinging || pingResult == null -> MaterialTheme.colorScheme.onSurfaceVariant
-                                pingResult!!.first -> Color(0xFF4CAF50)
+                                pingResult!!.first -> StatusSuccess
                                 else -> MaterialTheme.colorScheme.error
                             }
                             Text(
@@ -200,54 +206,39 @@ fun DebugDialog(
                                 }
                             },
                             enabled = !isPinging,
-                            shape = RoundedCornerShape(10.dp)
+                            shape = RoundedCornerShape(Dimens.RadiusSmall)
                         ) {
                             Text(if (isPinging) "…" else "Test")
                         }
                     }
                 }
 
-                // SECTION: Memory & Cache Inspector
+                // Section: Memory Cache Stats
                 Surface(
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(Dimens.RadiusLarge),
                     color = MaterialTheme.colorScheme.surfaceContainerHigh
                 ) {
-                    Column(modifier = Modifier.padding(14.dp)) {
+                    Column(modifier = Modifier.padding(Dimens.SpacingNormal)) {
                         Text(
                             text = "Memory Cache Stats",
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("Cached Weeks:", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text("${cacheStats.cachedWeeksCount} weeks", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
-                        }
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("Cached Calendar Days:", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text("${cacheStats.cachedCalendarDaysCount} days", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
-                        }
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("Loaded Courses:", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text("${cacheStats.coursesCount} courses", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
-                        }
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("School Periods (ClassHours):", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text("${cacheStats.classHoursCount} periods", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
-                        }
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("Teachers in Memory:", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text("${cacheStats.teachersCount} teachers", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
-                        }
+                        Spacer(modifier = Modifier.height(Dimens.SpacingStandard))
+                        CacheStatRow("Cached Weeks:", "${cacheStats.cachedWeeksCount} weeks")
+                        CacheStatRow("Cached Calendar Days:", "${cacheStats.cachedCalendarDaysCount} days")
+                        CacheStatRow("Loaded Courses:", "${cacheStats.coursesCount} courses")
+                        CacheStatRow("School Periods (ClassHours):", "${cacheStats.classHoursCount} periods")
+                        CacheStatRow("Teachers in Memory:", "${cacheStats.teachersCount} teachers")
                     }
                 }
 
-                // SECTION: JWT Token & Expiration
+                // Section: JWT Token
                 Surface(
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(Dimens.RadiusLarge),
                     color = MaterialTheme.colorScheme.surfaceContainerHigh
                 ) {
-                    Column(modifier = Modifier.padding(14.dp)) {
+                    Column(modifier = Modifier.padding(Dimens.SpacingNormal)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -266,14 +257,18 @@ fun DebugDialog(
                                     }
                                 },
                                 enabled = jwtToken != null,
-                                modifier = Modifier.size(28.dp)
+                                modifier = Modifier.size(Dimens.RadiusExtraLarge)
                             ) {
-                                Icon(Icons.Default.ContentCopy, contentDescription = "Copy", modifier = Modifier.size(16.dp))
+                                Icon(
+                                    Icons.Default.ContentCopy,
+                                    contentDescription = "Copy",
+                                    modifier = Modifier.size(Dimens.IconSizeSmall)
+                                )
                             }
                         }
 
                         if (expInfo != null) {
-                            Spacer(modifier = Modifier.height(2.dp))
+                            Spacer(modifier = Modifier.height(Dimens.SpacingHairline))
                             Text(
                                 text = "Expires: $expInfo",
                                 style = MaterialTheme.typography.bodySmall,
@@ -282,35 +277,35 @@ fun DebugDialog(
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(6.dp))
+                        Spacer(modifier = Modifier.height(Dimens.SpacingSmall))
 
                         Surface(
-                            shape = RoundedCornerShape(8.dp),
+                            shape = RoundedCornerShape(Dimens.RadiusExtraSmall),
                             color = MaterialTheme.colorScheme.surfaceContainerLowest
                         ) {
                             Text(
                                 text = decodedJwtJson ?: jwtToken?.take(48)?.let { "$it…" } ?: "No active session",
                                 fontFamily = FontFamily.Monospace,
                                 fontSize = 10.sp,
-                                modifier = Modifier.padding(8.dp),
+                                modifier = Modifier.padding(Dimens.SpacingStandard),
                                 maxLines = 4
                             )
                         }
                     }
                 }
 
-                // SECTION: Build & Environment Info
+                // Section: Environment
                 Surface(
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(Dimens.RadiusLarge),
                     color = MaterialTheme.colorScheme.surfaceContainerHigh
                 ) {
-                    Column(modifier = Modifier.padding(14.dp)) {
+                    Column(modifier = Modifier.padding(Dimens.SpacingNormal)) {
                         Text(
                             text = "Environment",
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(Dimens.SpacingExtraSmall))
                         Text(
                             text = "Device: ${Build.MANUFACTURER} ${Build.MODEL} (Android ${Build.VERSION.RELEASE}, API ${Build.VERSION.SDK_INT})",
                             style = MaterialTheme.typography.bodySmall,
@@ -325,7 +320,7 @@ fun DebugDialog(
                     }
                 }
 
-                // SECTION: Copy Diagnostics Report Button
+                // Copy Diagnostic Report
                 Button(
                     onClick = {
                         val report = buildString {
@@ -344,11 +339,15 @@ fun DebugDialog(
                         clipboardManager.setText(AnnotatedString(report))
                         Toast.makeText(context, reportCopiedMsg, Toast.LENGTH_SHORT).show()
                     },
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(Dimens.RadiusMedium),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Icon(
+                        Icons.Default.Share,
+                        contentDescription = null,
+                        modifier = Modifier.size(Dimens.ActionIconSize)
+                    )
+                    Spacer(modifier = Modifier.width(Dimens.SpacingStandard))
                     Text("Copy Diagnostics Report")
                 }
             }
@@ -358,6 +357,25 @@ fun DebugDialog(
                 Text(stringResource(R.string.cd_close))
             }
         },
-        shape = RoundedCornerShape(28.dp)
+        shape = RoundedCornerShape(Dimens.RadiusExtraLarge)
     )
+}
+
+@Composable
+private fun CacheStatRow(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = FontWeight.Bold
+        )
+    }
 }
