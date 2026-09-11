@@ -1,4 +1,4 @@
-package org.abgehoben.xenon.navigation
+package org.abgehoben.xenon.ui.navigation
 
 import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons

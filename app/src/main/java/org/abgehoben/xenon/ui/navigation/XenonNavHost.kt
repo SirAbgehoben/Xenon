@@ -1,4 +1,4 @@
-package org.abgehoben.xenon.navigation
+package org.abgehoben.xenon.ui.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier

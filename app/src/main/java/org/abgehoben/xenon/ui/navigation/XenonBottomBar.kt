@@ -1,4 +1,4 @@
-package org.abgehoben.xenon.navigation
+package org.abgehoben.xenon.ui.navigation
 
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
