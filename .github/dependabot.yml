@@ -5,7 +5,40 @@
 
 version: 2
 updates:
-  - package-ecosystem: "" # See documentation for possible values
-    directory: "/" # Location of package manifests
+  # 1. Android / Gradle dependencies and libs.versions.toml
+  - package-ecosystem: "gradle"
+    directory: "/"
     schedule:
       interval: "weekly"
+      day: "friday"
+      time: "16:30"
+      timezone: "Europe/Berlin"
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: "chore(deps)"
+    # Bundle related dependencies into single Pull Requests
+    groups:
+      compose:
+        patterns:
+          - "androidx.compose*"
+          - "org.jetbrains.compose*"
+      ktor:
+        patterns:
+          - "io.ktor*"
+      androidx-core:
+        patterns:
+          - "androidx.core*"
+          - "androidx.lifecycle*"
+          - "androidx.activity*"
+          - "androidx.navigation*"
+          - "androidx.datastore*"
+      kotlin:
+        patterns:
+          - "org.jetbrains.kotlin*"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "chore(ci)"
