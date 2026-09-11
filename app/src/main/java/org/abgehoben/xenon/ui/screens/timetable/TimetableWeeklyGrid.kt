@@ -20,6 +20,7 @@ import org.abgehoben.xenon.data.model.timetable.MergedSlot
 import org.abgehoben.xenon.data.model.timetable.TimetableGrid
 import org.abgehoben.xenon.data.model.timetable.TimetableSlot
 import org.abgehoben.xenon.ui.screens.timetable.components.LiveTimeIndicatorOverlay
+import org.abgehoben.xenon.ui.screens.timetable.components.TimetablePeriodColumn
 import org.abgehoben.xenon.ui.screens.timetable.components.calculateCurrentTimeYOffset
 import org.abgehoben.xenon.ui.screens.timetable.components.rememberLiveTime
 import org.abgehoben.xenon.ui.screens.timetable.util.TimetableLayoutUtils
@@ -153,45 +154,14 @@ fun UntisWeeklyGrid( //Todo implement proper scaling
 
             Box(modifier = Modifier.fillMaxSize().verticalScroll(vScrollState)) {
                 Row(modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.width(Dimens.TimetableTimeColWidth)) {
-                        for (h in 1..totalHours) {
-                            val (startTime, endTime) = TimetableLayoutUtils.getTimeRangeForHour(h, classHours)
-                            Box(
-                                modifier = Modifier
-                                    .height(baseHourHeight)
-                                    .fillMaxWidth(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Surface(
-                                        shape = CircleShape,
-                                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                                        modifier = Modifier.size(22.dp)
-                                    ) {
-                                        Box(contentAlignment = Alignment.Center) {
-                                            Text(
-                                                "$h",
-                                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                                                fontWeight = FontWeight.Black
-                                            )
-                                        }
-                                    }
-                                    Spacer(modifier = Modifier.height(Dimens.SpacingHairline))
-                                    Text(
-                                        text = "$startTime\n$endTime",
-                                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp, lineHeight = 9.5.sp),
-                                        textAlign = TextAlign.Center,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
-                                    )
-                                }
-                            }
-
-                            if (h < totalHours) {
-                                val breakMin = TimetableLayoutUtils.getBreakMinutesAfter(h, classHours)
-                                Spacer(modifier = Modifier.height(TimetableLayoutUtils.getBreakGapDp(breakMin, scaleBreaks)))
-                            }
-                        }
-                    }
+                    TimetablePeriodColumn(
+                        startHour = 1,
+                        totalHours = totalHours,
+                        classHours = classHours,
+                        baseHourHeight = baseHourHeight,
+                        scaleBreaks = scaleBreaks,
+                        modifier = Modifier.width(Dimens.TimetableTimeColWidth)
+                    )
 
                     Spacer(modifier = Modifier.width(Dimens.TimetableBlockGap))
 
