@@ -43,8 +43,14 @@ fun UntisWeeklyGrid( //Todo implement proper scaling
         DateTimeFormatter.ofPattern("dd.MM.", currentLocale)
     }
 
-    val totalHours = 9
     val classHours = grid.classHours
+    val maxClassHour = classHours.maxOfOrNull { it.number } ?: 0
+    val maxLessonHour = grid.grid.values.flatMap { dayMap ->
+        dayMap.filterValues { slot -> slot != null }.keys
+    }.maxOrNull() ?: 0
+
+    // Use the API's class hours count, only expanding if a lesson exists beyond it
+    val totalHours = maxOf(maxClassHour, maxLessonHour).takeIf { it > 0 } ?: 9
 
     val nowTime = rememberLiveTime()
     val today = LocalDate.now()

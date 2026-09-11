@@ -22,10 +22,14 @@ object TimetableGridBuilder {
         val classHourMap = classHours.associateBy { it.id }
         val friday = monday.plusDays(4)
 
+        val availableHours = classHours.map { it.number }
+
         val grid = mutableMapOf<Int, MutableMap<Int, TimetableSlot?>>()
         for (day in 1..5) {
             grid[day] = mutableMapOf()
-            for (hour in 1..10) grid[day]!![hour] = null
+            for (hour in availableHours) {
+                grid[day]!![hour] = null
+            }
         }
 
         val calWeek = monday.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)

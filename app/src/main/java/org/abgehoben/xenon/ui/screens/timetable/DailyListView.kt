@@ -103,7 +103,12 @@ fun DailyListView(
                 subDate?.dayOfWeek?.value == dayIdx
             }.distinctBy { it.text }
 
-            val mergedSlots = TimetableLayoutUtils.getMergedSlotsForDay(daySlots, 9, mergeLessons).filter { it.slot != null }
+            val maxDayHour = maxOf(
+                classHours.maxOfOrNull { it.number } ?: 0,
+                daySlots.filterValues { it != null }.keys.maxOrNull() ?: 0
+            ).takeIf { it > 0 } ?: 9
+
+            val mergedSlots = TimetableLayoutUtils.getMergedSlotsForDay(daySlots, maxDayHour, mergeLessons).filter { it.slot != null }
 
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
