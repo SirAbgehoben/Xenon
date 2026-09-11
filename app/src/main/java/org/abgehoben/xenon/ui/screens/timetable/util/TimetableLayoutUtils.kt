@@ -66,19 +66,7 @@ object TimetableLayoutUtils {
         if (ch != null && ch.from.length >= 5 && ch.until.length >= 5) {
             return Pair(ch.from.substring(0, 5), ch.until.substring(0, 5))
         }
-        return when (hour) {
-            1 -> "08:20" to "09:05"
-            2 -> "09:05" to "09:50"
-            3 -> "10:10" to "10:55"
-            4 -> "10:55" to "11:40"
-            5 -> "12:00" to "12:45"
-            6 -> "12:45" to "13:30"
-            7 -> "14:15" to "15:00"
-            8 -> "15:00" to "15:45"
-            9 -> "15:45" to "16:30"
-            10 -> "16:30" to "17:15"
-            else -> "" to ""
-        }
+        return Pair("", "")
     }
 
     fun getBreakMinutesAfter(hour: Int, classHours: List<ClassHour>): Long {
@@ -92,12 +80,7 @@ object TimetableLayoutUtils {
                 if (diff >= 0) return diff
             } catch (_: Exception) {}
         }
-        return when (hour) {
-            2 -> 20L
-            4 -> 20L
-            6 -> 45L
-            else -> 0L
-        }
+        return 0L
     }
 
     fun getBreakGapDp(breakMinutes: Long, scaleBreaks: Boolean = true): Dp {
