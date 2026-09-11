@@ -29,7 +29,7 @@ import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 
 @Composable
-fun UntisWeeklyGrid(
+fun UntisWeeklyGrid( //Todo implement proper scaling
     grid: TimetableGrid,
     mergeLessons: Boolean = true,
     scaleBreaks: Boolean = true,
