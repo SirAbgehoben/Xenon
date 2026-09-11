@@ -1,7 +1,7 @@
 package org.abgehoben.xenon.ui.screens.settings
 
+import android.content.ClipData
 import android.widget.Toast
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -10,22 +10,25 @@ import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.platform.toClipEntry
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
-import org.abgehoben.xenon.AppState
 import org.abgehoben.xenon.MainViewModel
 import org.abgehoben.xenon.R
-import org.abgehoben.xenon.data.ThemeMode
+import org.abgehoben.xenon.data.local.model.ThemeMode
+import org.abgehoben.xenon.ui.screens.settings.components.SettingsClickableItem
+import org.abgehoben.xenon.ui.screens.settings.components.SettingsGroupCard
+import org.abgehoben.xenon.ui.screens.settings.components.SettingsSwitchItem
+import org.abgehoben.xenon.ui.screens.settings.dialogs.*
+import org.abgehoben.xenon.ui.state.AppState
+import org.abgehoben.xenon.ui.theme.Dimens
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(viewModel: MainViewModel) {
     val userSettings by viewModel.userSettings.collectAsState()
@@ -33,10 +36,9 @@ fun SettingsScreen(viewModel: MainViewModel) {
     val lastScheduleLoadDurationMs by viewModel.lastScheduleLoadDurationMs.collectAsState()
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
-    val clipboardManager = LocalClipboardManager.current
+    val clipboard = LocalClipboard.current
     val uriHandler = LocalUriHandler.current
 
-    // Pre-resolve strings composably to avoid context.getString() lint errors
     val cacheClearedMsg = stringResource(R.string.cache_cleared)
     val urlCopiedMsg = stringResource(R.string.url_copied)
     val icalTokenRotatedMsg = stringResource(R.string.ical_token_rotated)
@@ -53,7 +55,12 @@ fun SettingsScreen(viewModel: MainViewModel) {
     val activeToken = (appState as? AppState.Authenticated)?.token
 
     Scaffold(
-        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        contentWindowInsets = WindowInsets(
+            Dimens.SpacingNone,
+            Dimens.SpacingNone,
+            Dimens.SpacingNone,
+            Dimens.SpacingNone
+        ),
         topBar = {
             TopAppBar(
                 title = {
@@ -71,9 +78,8 @@ fun SettingsScreen(viewModel: MainViewModel) {
             modifier = Modifier
                 .padding(innerPadding)
                 .fillMaxSize(),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+            contentPadding = PaddingValues(horizontal = Dimens.SpacingLarge, vertical = Dimens.SpacingStandard)
         ) {
-            // Section 1: Account
             item {
                 SettingsGroupCard(title = stringResource(R.string.section_account)) {
                     SettingsClickableItem(
@@ -85,7 +91,6 @@ fun SettingsScreen(viewModel: MainViewModel) {
                 }
             }
 
-            // Section 2: Timetable
             item {
                 SettingsGroupCard(title = stringResource(R.string.section_timetable)) {
                     SettingsClickableItem(
@@ -121,7 +126,6 @@ fun SettingsScreen(viewModel: MainViewModel) {
                 }
             }
 
-            // Section: Calendar
             item {
                 SettingsGroupCard(title = stringResource(R.string.section_calendar)) {
                     SettingsClickableItem(
@@ -133,7 +137,6 @@ fun SettingsScreen(viewModel: MainViewModel) {
                 }
             }
 
-            // Section: Appearance
             item {
                 SettingsGroupCard(title = stringResource(R.string.section_appearance)) {
                     val themeLabel = when (userSettings.themeMode) {
@@ -158,7 +161,6 @@ fun SettingsScreen(viewModel: MainViewModel) {
                 }
             }
 
-            // Section: Storage & Data
             item {
                 SettingsGroupCard(title = stringResource(R.string.section_storage)) {
                     SettingsClickableItem(
@@ -181,7 +183,6 @@ fun SettingsScreen(viewModel: MainViewModel) {
                 }
             }
 
-            // Section: About & Debug
             item {
                 SettingsGroupCard(title = stringResource(R.string.section_about)) {
                     SettingsClickableItem(
@@ -195,9 +196,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
                         title = stringResource(R.string.about_github),
                         subtitle = "SirAbgehoben/Xenon",
                         icon = Icons.Default.Code,
-                        onClick = {
-                            uriHandler.openUri("https://github.com/SirAbgehoben/Xenon")
-                        }
+                        onClick = { uriHandler.openUri("https://github.com/SirAbgehoben/Xenon") }
                     )
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
                     SettingsClickableItem(
@@ -209,97 +208,48 @@ fun SettingsScreen(viewModel: MainViewModel) {
                 }
             }
 
-            // Section: Sign Out
             item {
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(Dimens.SpacingMedium))
                 Button(
                     onClick = { showLogoutDialog = true },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.errorContainer,
                         contentColor = MaterialTheme.colorScheme.onErrorContainer
                     ),
-                    shape = RoundedCornerShape(18.dp),
-                    modifier = Modifier.fillMaxWidth().height(56.dp)
+                    shape = RoundedCornerShape(Dimens.RadiusPill),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(Dimens.ButtonHeightStandard)
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ExitToApp,
                         contentDescription = null,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(Dimens.IconSizeMedium)
                     )
-                    Spacer(modifier = Modifier.width(10.dp))
+                    Spacer(modifier = Modifier.width(Dimens.SpacingSmall))
                     Text(
                         text = stringResource(R.string.settings_logout),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
                 }
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(Dimens.SpacingJumbo))
             }
         }
     }
 
-    // Theme Mode Dialog
     if (showThemeDialog) {
-        AlertDialog(
-            onDismissRequest = { showThemeDialog = false },
-            title = { Text(stringResource(R.string.pref_theme)) },
-            text = {
-                Column {
-                    ThemeMode.entries.forEach { mode ->
-                        val label = when (mode) {
-                            ThemeMode.SYSTEM -> stringResource(R.string.theme_system)
-                            ThemeMode.LIGHT -> stringResource(R.string.theme_light)
-                            ThemeMode.DARK -> stringResource(R.string.theme_dark)
-                        }
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    viewModel.setThemeMode(mode)
-                                    showThemeDialog = false
-                                }
-                                .padding(vertical = 12.dp)
-                        ) {
-                            RadioButton(
-                                selected = userSettings.themeMode == mode,
-                                onClick = {
-                                    viewModel.setThemeMode(mode)
-                                    showThemeDialog = false
-                                }
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(label)
-                        }
-                    }
-                }
-            },
-            confirmButton = {},
-            dismissButton = {
-                TextButton(onClick = { showThemeDialog = false }) {
-                    Text(stringResource(R.string.cancel))
-                }
-            },
-            shape = RoundedCornerShape(24.dp)
+        ThemeSelectionDialog(
+            currentTheme = userSettings.themeMode,
+            onSelectTheme = viewModel::setThemeMode,
+            onDismiss = { showThemeDialog = false }
         )
     }
 
-    // Disclaimer Dialog
     if (showDisclaimerDialog) {
-        AlertDialog(
-            onDismissRequest = { showDisclaimerDialog = false },
-            title = { Text(stringResource(R.string.disclaimer_title), fontWeight = FontWeight.Bold) },
-            text = { Text(stringResource(R.string.disclaimer_text)) },
-            confirmButton = {
-                TextButton(onClick = { showDisclaimerDialog = false }) {
-                    Text(stringResource(R.string.cd_close))
-                }
-            },
-            shape = RoundedCornerShape(24.dp)
-        )
+        DisclaimerDialog(onDismiss = { showDisclaimerDialog = false })
     }
 
-    // iCal Feed Dialog
     if (showIcalDialog) {
         LaunchedEffect(Unit) {
             isLoadingIcal = true
@@ -307,103 +257,43 @@ fun SettingsScreen(viewModel: MainViewModel) {
             isLoadingIcal = false
         }
 
-        AlertDialog(
-            onDismissRequest = { showIcalDialog = false },
-            title = {
-                Text(
-                    text = stringResource(R.string.ical_dialog_title),
-                    fontWeight = FontWeight.Bold
-                )
-            },
-            text = {
-                Column {
-                    Text(
-                        text = stringResource(R.string.ical_calendar_desc),
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Surface(
-                        shape = RoundedCornerShape(10.dp),
-                        color = MaterialTheme.colorScheme.surfaceContainerLowest
-                    ) {
-                        Text(
-                            text = if (isLoadingIcal) stringResource(R.string.ical_loading) else (icalUrl ?: "—"),
-                            modifier = Modifier.padding(10.dp),
-                            style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    TextButton(
-                        onClick = {
-                            scope.launch {
-                                isLoadingIcal = true
-                                icalUrl = viewModel.fetchIcalUrl(renew = true)
-                                isLoadingIcal = false
-                                Toast.makeText(context, icalTokenRotatedMsg, Toast.LENGTH_SHORT).show()
-                            }
-                        }
-                    ) {
-                        Text(stringResource(R.string.ical_rotate_token))
-                    }
+        IcalExportDialog(
+            icalUrl = icalUrl,
+            isLoading = isLoadingIcal,
+            onRotateToken = {
+                scope.launch {
+                    isLoadingIcal = true
+                    icalUrl = viewModel.fetchIcalUrl(renew = true)
+                    isLoadingIcal = false
+                    Toast.makeText(context, icalTokenRotatedMsg, Toast.LENGTH_SHORT).show()
                 }
             },
-            confirmButton = {
-                Button(
-                    enabled = !icalUrl.isNullOrEmpty(),
-                    onClick = {
-                        clipboardManager.setText(AnnotatedString(icalUrl!!))
-                        Toast.makeText(context, urlCopiedMsg, Toast.LENGTH_SHORT).show()
-                        showIcalDialog = false
-                    }
-                ) {
-                    Text(stringResource(R.string.copy_url))
+            onCopyUrl = { url ->
+                scope.launch {
+                    val clipData = ClipData.newPlainText("ical_url", url)
+                    clipboard.setClipEntry(clipData.toClipEntry())
                 }
+                Toast.makeText(context, urlCopiedMsg, Toast.LENGTH_SHORT).show()
             },
-            dismissButton = {
-                TextButton(onClick = { showIcalDialog = false }) {
-                    Text(stringResource(R.string.cancel))
-                }
-            },
-            shape = RoundedCornerShape(24.dp)
+            onDismiss = { showIcalDialog = false }
         )
     }
 
-    // Logout Confirmation Dialog
     if (showLogoutDialog) {
-        AlertDialog(
-            onDismissRequest = { showLogoutDialog = false },
-            title = { Text(stringResource(R.string.logout_dialog_title), fontWeight = FontWeight.Bold) },
-            text = { Text(stringResource(R.string.logout_dialog_text)) },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        showLogoutDialog = false
-                        viewModel.logout()
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                ) {
-                    Text(stringResource(R.string.settings_logout))
-                }
+        LogoutConfirmationDialog(
+            onConfirm = {
+                showLogoutDialog = false
+                viewModel.logout()
             },
-            dismissButton = {
-                TextButton(onClick = { showLogoutDialog = false }) {
-                    Text(stringResource(R.string.cancel))
-                }
-            },
-            shape = RoundedCornerShape(24.dp)
+            onDismiss = { showLogoutDialog = false }
         )
     }
 
-    // Developer Debug Dialog
     if (showDebugDialog) {
         DebugDialog(
             jwtToken = activeToken,
             decodedJwtJson = remember(activeToken) { viewModel.decodeJwtPayload(activeToken) },
-            bundleVersion = "PLACEHOLDERN",
+            bundleVersion = "PLACEHOLDER", //TODO
             cacheStats = remember { viewModel.getTimetableCacheStats() },
             lastScheduleLoadDurationMs = lastScheduleLoadDurationMs,
             onPingServer = { viewModel.pingServer() },

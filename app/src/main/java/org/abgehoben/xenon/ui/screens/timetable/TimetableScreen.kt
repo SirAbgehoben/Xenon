@@ -14,12 +14,13 @@ import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import org.abgehoben.xenon.MainViewModel
-import org.abgehoben.xenon.data.MergedSlot
-import org.abgehoben.xenon.data.TimetableSlot
+import org.abgehoben.xenon.data.model.timetable.MergedSlot
+import org.abgehoben.xenon.data.model.timetable.TimetableSlot
+import org.abgehoben.xenon.ui.components.LoadingView
 import org.abgehoben.xenon.ui.components.SyncErrorState
+import org.abgehoben.xenon.ui.theme.Dimens
 import java.time.LocalDate
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
@@ -29,10 +30,14 @@ fun TimetableScreen(viewModel: MainViewModel) {
     val syncError by viewModel.syncError.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
     val isWeeklyView by viewModel.isWeeklyView.collectAsState()
+    val userSettings by viewModel.userSettings.collectAsState()
     val scope = rememberCoroutineScope()
 
     var selectedSlot by remember { mutableStateOf<Triple<Int, MergedSlot, TimetableSlot>?>(null) }
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val sheetState = rememberBottomSheetState(
+        initialValue = SheetValue.Hidden,
+        enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded)
+    )
 
     val initialPage = remember {
         val today = LocalDate.now().dayOfWeek.value
@@ -41,17 +46,20 @@ fun TimetableScreen(viewModel: MainViewModel) {
     val pagerState = rememberPagerState(initialPage = initialPage, pageCount = { 5 })
     val pullToRefreshState = rememberPullToRefreshState()
 
-    val calWeek = timetableGrid?.calWeek ?: ""
+    val calWeek = timetableGrid?.calWeek?.toString() ?: ""
     val weekType = timetableGrid?.weekType ?: ""
     val mondayDate = timetableGrid?.mondayDate ?: LocalDate.now()
 
-    val userSettings by viewModel.userSettings.collectAsState()
-
     Scaffold(
-        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        contentWindowInsets = WindowInsets(
+            Dimens.SpacingNone,
+            Dimens.SpacingNone,
+            Dimens.SpacingNone,
+            Dimens.SpacingNone
+        ),
         topBar = {
             TimetableTopBar(
-                calWeek = calWeek.toString(),
+                calWeek = calWeek,
                 weekType = weekType,
                 isWeeklyView = isWeeklyView,
                 onPrevWeek = { viewModel.prevWeek() },
@@ -80,7 +88,7 @@ fun TimetableScreen(viewModel: MainViewModel) {
                     if (syncError != null) {
                         SyncErrorState(error = syncError!!, onRetry = viewModel::refreshData)
                     } else {
-                        LoadingIndicator()
+                        LoadingView()
                     }
                 }
             } else {
@@ -90,7 +98,7 @@ fun TimetableScreen(viewModel: MainViewModel) {
                     label = "ViewModeTransition"
                 ) { weekly ->
                     if (weekly) {
-                        UntisWeeklyGrid(
+                        TimetableWeeklyGrid(
                             grid = timetableGrid!!,
                             mergeLessons = userSettings.mergeLessons,
                             scaleBreaks = userSettings.scaleBreaks,
@@ -117,7 +125,7 @@ fun TimetableScreen(viewModel: MainViewModel) {
                 sheetState = sheetState,
                 dragHandle = null,
                 containerColor = MaterialTheme.colorScheme.surface,
-                shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+                shape = RoundedCornerShape(topStart = Dimens.RadiusDialog, topEnd = Dimens.RadiusDialog)
             ) {
                 val (d, merged, slot) = selectedSlot!!
                 LessonDetailsBottomSheet(

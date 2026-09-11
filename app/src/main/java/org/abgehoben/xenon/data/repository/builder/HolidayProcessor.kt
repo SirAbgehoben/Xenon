@@ -62,9 +62,10 @@ object HolidayProcessor {
             for (day in 1..5) {
                 val dayDate = monday.plusDays(day.toLong() - 1)
                 if (!dayDate.isBefore(startDate) && !dayDate.isAfter(endDate)) {
-                    for (hour in 1..10) {
-                        if (grid[day]!![hour] == null || grid[day]!![hour]?.isHoliday == true) {
-                            grid[day]!![hour] = TimetableSlot(
+                    val dayMap = grid[day] ?: continue
+                    for (hour in dayMap.keys) {
+                        if (dayMap[hour] == null || dayMap[hour]?.isHoliday == true) {
+                            dayMap[hour] = TimetableSlot(
                                 course = holidayTitle,
                                 teacher = "",
                                 room = "",

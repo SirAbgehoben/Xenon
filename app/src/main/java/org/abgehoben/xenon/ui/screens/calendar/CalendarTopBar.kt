@@ -14,15 +14,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import org.abgehoben.xenon.R
+import org.abgehoben.xenon.ui.theme.Dimens
 import java.time.YearMonth
 import java.time.format.TextStyle
 
 @Composable
 fun MonthSelector(
     currentMonth: YearMonth,
-    onMonthChange: (YearMonth) -> Unit
+    onMonthChange: (YearMonth) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val currentLocale = LocalConfiguration.current.locales[0]
     val monthTitle = remember(currentMonth, currentLocale) {
@@ -30,47 +31,50 @@ fun MonthSelector(
     }
 
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp),
+            .padding(horizontal = Dimens.SpacingLarge, vertical = Dimens.SpacingSmall),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         FilledTonalIconButton(
             onClick = { onMonthChange(currentMonth.minusMonths(1)) },
-            modifier = Modifier.size(36.dp),
+            modifier = Modifier.size(Dimens.IconSizeBig),
             shape = CircleShape
         ) {
             Icon(
-                Icons.Default.ChevronLeft,
+                imageVector = Icons.Default.ChevronLeft,
                 contentDescription = stringResource(R.string.cd_prev_month),
-                modifier = Modifier.size(18.dp)
+                modifier = Modifier.size(Dimens.ActionIconSize)
             )
         }
 
         Surface(
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(Dimens.RadiusLarge),
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
-            tonalElevation = 2.dp
+            tonalElevation = Dimens.ElevationLevel2
         ) {
             Text(
                 text = monthTitle,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Black,
                 color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+                modifier = Modifier.padding(
+                    horizontal = Dimens.SpacingLarge,
+                    vertical = Dimens.SpacingSmall
+                )
             )
         }
 
         FilledTonalIconButton(
             onClick = { onMonthChange(currentMonth.plusMonths(1)) },
-            modifier = Modifier.size(36.dp),
+            modifier = Modifier.size(Dimens.IconSizeBig),
             shape = CircleShape
         ) {
             Icon(
-                Icons.Default.ChevronRight,
+                imageVector = Icons.Default.ChevronRight,
                 contentDescription = stringResource(R.string.cd_next_month),
-                modifier = Modifier.size(18.dp)
+                modifier = Modifier.size(Dimens.ActionIconSize)
             )
         }
     }

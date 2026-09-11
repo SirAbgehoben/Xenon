@@ -18,9 +18,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.abgehoben.xenon.R
-import org.abgehoben.xenon.data.ClassHour
-import org.abgehoben.xenon.data.MergedSlot
-import org.abgehoben.xenon.data.TimetableSlot
+import org.abgehoben.xenon.data.model.timetable.MergedSlot
+import org.abgehoben.xenon.data.model.timetable.TimetableSlot
+import org.abgehoben.xenon.data.remote.dto.timetable.ClassHour
+import org.abgehoben.xenon.ui.screens.timetable.util.TimetableLayoutUtils.getTimeRangeForHour
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -142,7 +143,7 @@ fun LessonDetailsBottomSheet(
             val effectiveNewRoom = slot.subRoom ?: slot.newRoom
             val hasRealRoomChange = effectiveNewRoom != null && slot.room.isNotEmpty() && effectiveNewRoom != slot.room
 
-            if (slot.cancelled || isSubstitution || hasRealRoomChange) {
+            if (slot.cancelled || isSubstitution) {
                 Spacer(modifier = Modifier.height(24.dp))
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                 Spacer(modifier = Modifier.height(16.dp))
@@ -156,9 +157,8 @@ fun LessonDetailsBottomSheet(
                     )
                     Spacer(modifier = Modifier.width(16.dp))
                     Column {
-                        val isReplacement = isSubstitution || hasRealRoomChange
                         Text(
-                            text = stringResource(if (isReplacement) R.string.substitution_title else R.string.lesson_cancelled),
+                            text = stringResource(if (isSubstitution) R.string.substitution_title else R.string.lesson_cancelled),
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.Bold,
                             color = accentColor

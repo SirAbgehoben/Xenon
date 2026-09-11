@@ -1,6 +1,7 @@
 package org.abgehoben.xenon
 
 import android.app.Application
+import android.util.Base64
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -17,12 +18,21 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.withTimeout
-import org.abgehoben.xenon.data.*
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
 import org.abgehoben.xenon.data.local.SessionManager
 import org.abgehoben.xenon.data.local.SettingsManager
+import org.abgehoben.xenon.data.local.model.ThemeMode
+import org.abgehoben.xenon.data.local.model.UserSettings
+import org.abgehoben.xenon.data.model.calendar.ProcessedEvent
+import org.abgehoben.xenon.data.model.system.CacheStats
+import org.abgehoben.xenon.data.model.timetable.TimetableGrid
 import org.abgehoben.xenon.data.remote.SchulmanagerApi
+import org.abgehoben.xenon.data.remote.dto.rpc.ApiCallRequest
 import org.abgehoben.xenon.data.repository.CalendarRepository
 import org.abgehoben.xenon.data.repository.TimetableRepository
+import org.abgehoben.xenon.ui.state.AppState
 import java.net.ConnectException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
@@ -30,16 +40,11 @@ import java.time.DayOfWeek
 import java.time.LocalDate
 import kotlin.time.Duration.Companion.milliseconds
 
-sealed class AppState {
-    object Loading : AppState()
-    object LoginRequired : AppState()
-    data class Authenticated(val token: String) : AppState()
-    data class Error(val message: String) : AppState()
-}
-
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     companion object {
         private const val TAG = "MainViewModel"
+        private const val TIMEOUT_NAV_MS = 15_000L
+        private const val TIMEOUT_SYNC_MS = 20_000L
     }
 
     private val sessionManager = SessionManager(application)
@@ -48,7 +53,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val calendarRepository = CalendarRepository(api)
     val timetableRepository = TimetableRepository(api, sessionManager, calendarRepository)
 
-    // User settings state stream from DataStore
     val userSettings: StateFlow<UserSettings> = settingsManager.userSettings
         .stateIn(viewModelScope, SharingStarted.Eagerly, UserSettings())
 
@@ -71,7 +75,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val syncError: StateFlow<String?> = _syncError
 
     private val _weekOffset = MutableStateFlow(0)
-    val weekOffset: StateFlow<Int> = _weekOffset
 
     private val _isWeeklyView = MutableStateFlow(true)
     val isWeeklyView: StateFlow<Boolean> = _isWeeklyView
@@ -114,34 +117,30 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-
     private suspend fun ensureStudentData(token: String) {
         try {
             val statusObj = api.getLoginStatus(token)
-            val userObj = statusObj?.get("user") as? kotlinx.serialization.json.JsonObject
+            val userObj = statusObj?.get("user") as? JsonObject
 
-            val directStudent = userObj?.get("associatedStudent") as? kotlinx.serialization.json.JsonObject
-            val parentStudent = (userObj?.get("associatedParents") as? kotlinx.serialization.json.JsonArray)
-                ?.mapNotNull { (it as? kotlinx.serialization.json.JsonObject)?.get("student") as? kotlinx.serialization.json.JsonObject }
-                ?.firstOrNull()
-            val pluralStudent = (userObj?.get("associatedStudents") as? kotlinx.serialization.json.JsonArray)
-                ?.firstOrNull() as? kotlinx.serialization.json.JsonObject
+            val directStudent = userObj?.get("associatedStudent") as? JsonObject
+            val parentStudent =
+                (userObj?.get("associatedParents") as? JsonArray)?.firstNotNullOfOrNull {
+                    (it as? JsonObject)?.get("student") as? JsonObject
+                }
+            val pluralStudent = (userObj?.get("associatedStudents") as? JsonArray)
+                ?.firstOrNull() as? JsonObject
 
-            val resolved = directStudent
-                ?: parentStudent
-                ?: pluralStudent
-                ?: userObj
+            val resolved = directStudent ?: parentStudent ?: pluralStudent ?: userObj
 
             if (resolved != null) {
                 sessionManager.saveStudentData(resolved.toString())
-                Log.d("MainViewModel", "Saved resolved student data: $resolved")
+                Log.d(TAG, "Saved resolved student data: $resolved")
             }
         } catch (e: Exception) {
-            Log.w("MainViewModel", "Failed to resolve student info from login-status", e)
+            Log.w(TAG, "Failed to resolve student info from login-status", e)
         }
     }
 
-    // In MainViewModel.kt -> login()
     fun login(username: String, password: String) {
         viewModelScope.launch(coroutineExceptionHandler) {
             _appState.value = AppState.Loading
@@ -191,19 +190,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun nextWeek() = navigateWeek(1)
     fun prevWeek() = navigateWeek(-1)
+
+    @Suppress("unused") //While this currently is not being used, I can imagine that I will eventually, so I will just keep it here for completeness.
     fun currentWeek() {
-        if (_weekOffset.value != 0) {
-            _weekOffset.value = 0
-            refreshCurrentState(false)
+        val today = LocalDate.now().dayOfWeek
+        val isWeekend = today == DayOfWeek.SATURDAY || today == DayOfWeek.SUNDAY
+        val targetOffset = if (userSettings.value.weekendAdvance && isWeekend) 1 else 0
+
+        if (_weekOffset.value != targetOffset) {
+            _weekOffset.value = targetOffset
+            refreshCurrentState()
         }
     }
 
     private fun navigateWeek(delta: Int) {
         _weekOffset.value += delta
-        refreshCurrentState(false)
+        refreshCurrentState()
     }
 
-    private fun refreshCurrentState(forceRefresh: Boolean) {
+    private fun refreshCurrentState() {
         val state = _appState.value
         if (state is AppState.Authenticated) {
             currentNavJob?.cancel()
@@ -212,10 +217,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 _syncError.value = null
                 val startTime = System.currentTimeMillis()
                 try {
-                    withTimeout(15_000L.milliseconds) {
+                    withTimeout(TIMEOUT_NAV_MS.milliseconds) {
                         val baseMonday = LocalDate.now().minusDays(LocalDate.now().dayOfWeek.value.toLong() - 1)
                         val targetMonday = baseMonday.plusWeeks(_weekOffset.value.toLong())
-                        val grid = timetableRepository.getFullTimetable(state.token, targetMonday, forceRefresh)
+                        val grid = timetableRepository.getFullTimetable(state.token, targetMonday, false)
                         _timetableGrid.value = grid
                         _lastScheduleLoadDurationMs.value = System.currentTimeMillis() - startTime
                     }
@@ -242,7 +247,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             _syncError.value = null
             val startTime = System.currentTimeMillis()
             try {
-                withTimeout(20_000L.milliseconds) {
+                withTimeout(TIMEOUT_SYNC_MS.milliseconds) {
                     val baseMonday = LocalDate.now().minusDays(LocalDate.now().dayOfWeek.value.toLong() - 1)
                     val currentTargetMonday = baseMonday.plusWeeks(_weekOffset.value.toLong())
 
@@ -257,7 +262,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         _timetableGrid.value = grid
                         _lastScheduleLoadDurationMs.value = System.currentTimeMillis() - startTime
 
-                        // CRITICAL: Only update calendarEvents if non-null; never wipe existing data with emptyMap on failure
                         if (calendarEvents != null) {
                             _calendarEvents.value = calendarEvents
                         }
@@ -266,14 +270,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     _appState.value = AppState.Authenticated(token)
                 }
 
-                // Background adjacent preloading (completely non-blocking)
                 if (userSettings.value.preloadWeeks) {
                     launch {
                         try {
                             val baseMonday = LocalDate.now().minusDays(LocalDate.now().dayOfWeek.value.toLong() - 1)
                             timetableRepository.getFullTimetable(token, baseMonday.plusWeeks(1), false)
                             timetableRepository.getFullTimetable(token, baseMonday.minusWeeks(1), false)
-                        } catch (_: Throwable) {}
+                        } catch (_: Throwable) {
+                            // Non-fatal preload failure
+                        }
                     }
                 }
             } catch (e: Throwable) {
@@ -305,24 +310,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val msg = e.message ?: ""
 
         return when {
-            msg.contains("401") || msg.contains("Session expired") ->
-                app.getString(R.string.error_session_expired)
-            msg.contains("429") || msg.contains("Rate limit") ->
-                app.getString(R.string.error_rate_limited)
-            e is UnknownHostException || e.cause is UnknownHostException ->
-                app.getString(R.string.error_no_internet)
-            e is ConnectException || e.cause is ConnectException ->
-                app.getString(R.string.error_server_unreachable)
-            e is SocketTimeoutException || e.cause is SocketTimeoutException ->
-                app.getString(R.string.error_timeout)
-            e.localizedMessage != null && e.localizedMessage!!.isNotEmpty() ->
-                e.localizedMessage!!
-            else ->
-                app.getString(R.string.error_network_generic)
+            msg.contains("401") || msg.contains("Session expired") -> app.getString(R.string.error_session_expired)
+            msg.contains("429") || msg.contains("Rate limit") -> app.getString(R.string.error_rate_limited)
+            e is UnknownHostException || e.cause is UnknownHostException -> app.getString(R.string.error_no_internet)
+            e is ConnectException || e.cause is ConnectException -> app.getString(R.string.error_server_unreachable)
+            e is SocketTimeoutException || e.cause is SocketTimeoutException -> app.getString(R.string.error_timeout)
+            !e.localizedMessage.isNullOrEmpty() -> e.localizedMessage!!
+            else -> app.getString(R.string.error_network_generic)
         }
     }
 
-    // Settings actions
+    // Settings proxies
     fun setThemeMode(mode: ThemeMode) = viewModelScope.launch { settingsManager.setThemeMode(mode) }
     fun setDynamicColor(enabled: Boolean) = viewModelScope.launch { settingsManager.setDynamicColor(enabled) }
     fun setDefaultViewWeekly(enabled: Boolean) = viewModelScope.launch {
@@ -335,7 +333,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val today = LocalDate.now().dayOfWeek
         if (today == DayOfWeek.SATURDAY || today == DayOfWeek.SUNDAY) {
             _weekOffset.value = if (enabled) 1 else 0
-            refreshCurrentState(false)
+            refreshCurrentState()
         }
     }
     fun setScaleBreaks(enabled: Boolean) = viewModelScope.launch { settingsManager.setScaleBreaks(enabled) }
@@ -362,12 +360,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         return try {
             val response = api.fetchCallsChunked(
                 token = (appState.value as? AppState.Authenticated)?.token ?: "",
-                requests = listOf(ApiCallRequest("main", "login-status", kotlinx.serialization.json.buildJsonObject {})),
+                requests = listOf(ApiCallRequest("main", "login-status", buildJsonObject {})),
                 chunkSize = 1
             )
             val latency = System.currentTimeMillis() - start
             Pair(response.results.isNotEmpty(), latency)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             val latency = System.currentTimeMillis() - start
             Pair(false, latency)
         }
@@ -378,10 +376,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         return try {
             val parts = jwt.split(".")
             if (parts.size >= 2) {
-                val decoded = android.util.Base64.decode(parts[1], android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING)
+                val decoded = Base64.decode(parts[1], Base64.URL_SAFE or Base64.NO_PADDING)
                 String(decoded, Charsets.UTF_8)
             } else null
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             null
         }
     }

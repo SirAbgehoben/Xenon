@@ -18,12 +18,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.abgehoben.xenon.R
-import org.abgehoben.xenon.data.ProcessedEvent
+import org.abgehoben.xenon.data.model.calendar.ProcessedEvent
+import org.abgehoben.xenon.ui.theme.Dimens
 
 @Composable
 fun EventListItem(
     event: ProcessedEvent,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val accentColor = if (event.isHoliday) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary
     val bgColor = if (event.isHoliday) {
@@ -33,18 +35,21 @@ fun EventListItem(
     }
 
     Surface(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
-            .height(56.dp)
+            .height(Dimens.ButtonHeightStandard)
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(Dimens.RadiusStandard),
         color = bgColor,
-        tonalElevation = 1.dp
+        tonalElevation = Dimens.ElevationLevel1
     ) {
-        Row(modifier = Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier = Modifier.fillMaxSize(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Box(
                 modifier = Modifier
-                    .padding(start = 4.dp)
+                    .padding(start = Dimens.SpacingExtraSmall)
                     .width(4.dp)
                     .fillMaxHeight(0.75f)
                     .clip(CircleShape)
@@ -53,7 +58,7 @@ fun EventListItem(
 
             Column(
                 modifier = Modifier
-                    .padding(horizontal = 12.dp, vertical = 6.dp)
+                    .padding(horizontal = Dimens.SpacingMedium, vertical = Dimens.SpacingSmall)
                     .weight(1f),
                 verticalArrangement = Arrangement.Center
             ) {
