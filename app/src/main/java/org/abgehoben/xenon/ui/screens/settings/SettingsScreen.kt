@@ -1,5 +1,6 @@
 package org.abgehoben.xenon.ui.screens.settings
 
+import android.content.ClipData
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -10,9 +11,11 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.platform.toClipEntry
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -35,7 +38,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
     val lastScheduleLoadDurationMs by viewModel.lastScheduleLoadDurationMs.collectAsState()
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
-    val clipboardManager = LocalClipboardManager.current
+    val clipboard = LocalClipboard.current
     val uriHandler = LocalUriHandler.current
 
     val cacheClearedMsg = stringResource(R.string.cache_cleared)
@@ -268,7 +271,10 @@ fun SettingsScreen(viewModel: MainViewModel) {
                 }
             },
             onCopyUrl = { url ->
-                clipboardManager.setText(AnnotatedString(url))
+                scope.launch {
+                    val clipData = ClipData.newPlainText("ical_url", url)
+                    clipboard.setClipEntry(clipData.toClipEntry())
+                }
                 Toast.makeText(context, urlCopiedMsg, Toast.LENGTH_SHORT).show()
             },
             onDismiss = { showIcalDialog = false }

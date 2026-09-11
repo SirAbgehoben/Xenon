@@ -75,7 +75,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val syncError: StateFlow<String?> = _syncError
 
     private val _weekOffset = MutableStateFlow(0)
-    val weekOffset: StateFlow<Int> = _weekOffset
 
     private val _isWeeklyView = MutableStateFlow(true)
     val isWeeklyView: StateFlow<Boolean> = _isWeeklyView
@@ -124,9 +123,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val userObj = statusObj?.get("user") as? JsonObject
 
             val directStudent = userObj?.get("associatedStudent") as? JsonObject
-            val parentStudent = (userObj?.get("associatedParents") as? JsonArray)
-                ?.mapNotNull { (it as? JsonObject)?.get("student") as? JsonObject }
-                ?.firstOrNull()
+            val parentStudent =
+                (userObj?.get("associatedParents") as? JsonArray)?.firstNotNullOfOrNull {
+                    (it as? JsonObject)?.get("student") as? JsonObject
+                }
             val pluralStudent = (userObj?.get("associatedStudents") as? JsonArray)
                 ?.firstOrNull() as? JsonObject
 
@@ -190,19 +190,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun nextWeek() = navigateWeek(1)
     fun prevWeek() = navigateWeek(-1)
+
+    @Suppress("unused") //While this currently is not being used, I can imagine that I will eventually, so I will just keep it here for completeness.
     fun currentWeek() {
-        if (_weekOffset.value != 0) {
-            _weekOffset.value = 0
-            refreshCurrentState(forceRefresh = false)
+        val today = LocalDate.now().dayOfWeek
+        val isWeekend = today == DayOfWeek.SATURDAY || today == DayOfWeek.SUNDAY
+        val targetOffset = if (userSettings.value.weekendAdvance && isWeekend) 1 else 0
+
+        if (_weekOffset.value != targetOffset) {
+            _weekOffset.value = targetOffset
+            refreshCurrentState()
         }
     }
 
     private fun navigateWeek(delta: Int) {
         _weekOffset.value += delta
-        refreshCurrentState(forceRefresh = false)
+        refreshCurrentState()
     }
 
-    private fun refreshCurrentState(forceRefresh: Boolean) {
+    private fun refreshCurrentState() {
         val state = _appState.value
         if (state is AppState.Authenticated) {
             currentNavJob?.cancel()
@@ -214,7 +220,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     withTimeout(TIMEOUT_NAV_MS.milliseconds) {
                         val baseMonday = LocalDate.now().minusDays(LocalDate.now().dayOfWeek.value.toLong() - 1)
                         val targetMonday = baseMonday.plusWeeks(_weekOffset.value.toLong())
-                        val grid = timetableRepository.getFullTimetable(state.token, targetMonday, forceRefresh)
+                        val grid = timetableRepository.getFullTimetable(state.token, targetMonday, false)
                         _timetableGrid.value = grid
                         _lastScheduleLoadDurationMs.value = System.currentTimeMillis() - startTime
                     }
@@ -327,7 +333,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val today = LocalDate.now().dayOfWeek
         if (today == DayOfWeek.SATURDAY || today == DayOfWeek.SUNDAY) {
             _weekOffset.value = if (enabled) 1 else 0
-            refreshCurrentState(forceRefresh = false)
+            refreshCurrentState()
         }
     }
     fun setScaleBreaks(enabled: Boolean) = viewModelScope.launch { settingsManager.setScaleBreaks(enabled) }
@@ -359,7 +365,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             )
             val latency = System.currentTimeMillis() - start
             Pair(response.results.isNotEmpty(), latency)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             val latency = System.currentTimeMillis() - start
             Pair(false, latency)
         }
@@ -373,7 +379,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val decoded = Base64.decode(parts[1], Base64.URL_SAFE or Base64.NO_PADDING)
                 String(decoded, Charsets.UTF_8)
             } else null
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             null
         }
     }

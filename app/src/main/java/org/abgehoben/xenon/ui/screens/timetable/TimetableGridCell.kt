@@ -26,7 +26,7 @@ import org.abgehoben.xenon.ui.theme.Dimens
 import org.abgehoben.xenon.ui.theme.StatusSubstitution
 
 @Composable
-fun UntisGridCell(slot: TimetableSlot, span: Int = 1) {
+fun TimetableGridCell(slot: TimetableSlot, span: Int = 1) {
     val isSubstitution = slot.substitution != null || slot.newRoom != null || slot.subRoom != null
 
     val accentColor = when {

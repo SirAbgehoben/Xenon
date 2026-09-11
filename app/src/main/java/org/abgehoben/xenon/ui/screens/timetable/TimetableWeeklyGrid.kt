@@ -28,7 +28,7 @@ import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 
 @Composable
-fun UntisWeeklyGrid(
+fun TimetableWeeklyGrid(
     grid: TimetableGrid,
     mergeLessons: Boolean = true,
     scaleBreaks: Boolean = true,
@@ -248,7 +248,7 @@ fun UntisWeeklyGrid(
                                                 }
                                         ) {
                                             if (merged.slot != null) {
-                                                UntisGridCell(merged.slot, merged.span)
+                                                TimetableGridCell(merged.slot, merged.span)
                                             }
                                         }
 

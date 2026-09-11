@@ -1,5 +1,6 @@
 package org.abgehoben.xenon.ui.screens.settings.dialogs
 
+import android.content.ClipData
 import android.os.Build
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
@@ -13,13 +14,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.toClipEntry
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 import org.abgehoben.xenon.R
@@ -40,7 +42,7 @@ fun DebugDialog(
     onPingServer: suspend () -> Pair<Boolean, Long>,
     onDismiss: () -> Unit
 ) {
-    val clipboardManager = LocalClipboardManager.current
+    val clipboard = LocalClipboard.current
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -131,7 +133,7 @@ fun DebugDialog(
                             Spacer(modifier = Modifier.height(Dimens.SpacingHairline))
                             Text(
                                 text = if (lastScheduleLoadDurationMs != null) {
-                                    "Fetched in ${lastScheduleLoadDurationMs} ms"
+                                    "Fetched in $lastScheduleLoadDurationMs ms"
                                 } else {
                                     "Not loaded in this session"
                                 },
@@ -252,7 +254,10 @@ fun DebugDialog(
                             IconButton(
                                 onClick = {
                                     if (jwtToken != null) {
-                                        clipboardManager.setText(AnnotatedString(jwtToken))
+                                        scope.launch {
+                                            val clipData = ClipData.newPlainText("jwt_token", jwtToken)
+                                            clipboard.setClipEntry(clipData.toClipEntry())
+                                        }
                                         Toast.makeText(context, tokenCopiedMsg, Toast.LENGTH_SHORT).show()
                                     }
                                 },
@@ -328,7 +333,7 @@ fun DebugDialog(
                             appendLine("- **Timestamp:** ${Instant.now()}")
                             appendLine("- **Device:** ${Build.MANUFACTURER} ${Build.MODEL} (Android ${Build.VERSION.RELEASE}, API ${Build.VERSION.SDK_INT})")
                             appendLine("- **Bundle Hash:** $bundleVersion")
-                            appendLine("- **Schedule Load Duration:** ${lastScheduleLoadDurationMs?.let { "${it} ms" } ?: "N/A"}")
+                            appendLine("- **Schedule Load Duration:** ${lastScheduleLoadDurationMs?.let { "$it ms" } ?: "N/A"}")
                             appendLine("- **Has Token:** ${jwtToken != null}")
                             appendLine("- **JWT Claims:** ${decodedJwtJson ?: "none"}")
                             appendLine("- **Cached Weeks:** ${cacheStats.cachedWeeksCount}")
@@ -336,7 +341,10 @@ fun DebugDialog(
                             appendLine("- **Courses in Memory:** ${cacheStats.coursesCount}")
                             appendLine("- **ClassHours in Memory:** ${cacheStats.classHoursCount}")
                         }
-                        clipboardManager.setText(AnnotatedString(report))
+                        scope.launch {
+                            val clipData = ClipData.newPlainText("debug_report", report)
+                            clipboard.setClipEntry(clipData.toClipEntry())
+                        }
                         Toast.makeText(context, reportCopiedMsg, Toast.LENGTH_SHORT).show()
                     },
                     shape = RoundedCornerShape(Dimens.RadiusMedium),

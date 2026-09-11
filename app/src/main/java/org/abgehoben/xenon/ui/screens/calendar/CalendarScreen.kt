@@ -12,7 +12,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import org.abgehoben.xenon.MainViewModel
 import org.abgehoben.xenon.R
@@ -34,7 +33,10 @@ fun CalendarScreen(viewModel: MainViewModel) {
     var currentMonth by remember { mutableStateOf(YearMonth.now()) }
 
     var selectedEvent by remember { mutableStateOf<ProcessedEvent?>(null) }
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val sheetState = rememberBottomSheetState(
+        initialValue = SheetValue.Hidden,
+        enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded)
+    )
     val scope = rememberCoroutineScope()
     val pullToRefreshState = rememberPullToRefreshState()
 

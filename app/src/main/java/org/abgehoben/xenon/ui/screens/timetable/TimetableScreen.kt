@@ -34,7 +34,10 @@ fun TimetableScreen(viewModel: MainViewModel) {
     val scope = rememberCoroutineScope()
 
     var selectedSlot by remember { mutableStateOf<Triple<Int, MergedSlot, TimetableSlot>?>(null) }
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val sheetState = rememberBottomSheetState(
+        initialValue = SheetValue.Hidden,
+        enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded)
+    )
 
     val initialPage = remember {
         val today = LocalDate.now().dayOfWeek.value
@@ -95,7 +98,7 @@ fun TimetableScreen(viewModel: MainViewModel) {
                     label = "ViewModeTransition"
                 ) { weekly ->
                     if (weekly) {
-                        UntisWeeklyGrid(
+                        TimetableWeeklyGrid(
                             grid = timetableGrid!!,
                             mergeLessons = userSettings.mergeLessons,
                             scaleBreaks = userSettings.scaleBreaks,

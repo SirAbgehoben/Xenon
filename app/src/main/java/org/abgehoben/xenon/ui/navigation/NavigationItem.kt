@@ -10,7 +10,7 @@ import org.abgehoben.xenon.R
 
 sealed class NavigationItem(
     val route: String,
-    @StringRes val labelRes: Int,
+    @param:StringRes val labelRes: Int,
     val icon: ImageVector
 ) {
     data object Timetable : NavigationItem("timetable", R.string.nav_timetable, Icons.AutoMirrored.Filled.List)

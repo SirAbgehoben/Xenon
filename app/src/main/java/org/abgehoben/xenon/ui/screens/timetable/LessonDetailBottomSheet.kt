@@ -143,7 +143,7 @@ fun LessonDetailsBottomSheet(
             val effectiveNewRoom = slot.subRoom ?: slot.newRoom
             val hasRealRoomChange = effectiveNewRoom != null && slot.room.isNotEmpty() && effectiveNewRoom != slot.room
 
-            if (slot.cancelled || isSubstitution || hasRealRoomChange) {
+            if (slot.cancelled || isSubstitution) {
                 Spacer(modifier = Modifier.height(24.dp))
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                 Spacer(modifier = Modifier.height(16.dp))
@@ -157,9 +157,8 @@ fun LessonDetailsBottomSheet(
                     )
                     Spacer(modifier = Modifier.width(16.dp))
                     Column {
-                        val isReplacement = isSubstitution || hasRealRoomChange
                         Text(
-                            text = stringResource(if (isReplacement) R.string.substitution_title else R.string.lesson_cancelled),
+                            text = stringResource(if (isSubstitution) R.string.substitution_title else R.string.lesson_cancelled),
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.Bold,
                             color = accentColor
