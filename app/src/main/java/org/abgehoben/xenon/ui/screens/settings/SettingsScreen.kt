@@ -293,7 +293,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
         DebugDialog(
             jwtToken = activeToken,
             decodedJwtJson = remember(activeToken) { viewModel.decodeJwtPayload(activeToken) },
-            bundleVersion = "PLACEHOLDERN",
+            bundleVersion = "PLACEHOLDER", //TODO
             cacheStats = remember { viewModel.getTimetableCacheStats() },
             lastScheduleLoadDurationMs = lastScheduleLoadDurationMs,
             onPingServer = { viewModel.pingServer() },
