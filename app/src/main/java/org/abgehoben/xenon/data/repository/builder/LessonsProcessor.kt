@@ -5,7 +5,10 @@ import org.abgehoben.xenon.data.model.timetable.SubstitutionSummary
 import org.abgehoben.xenon.data.model.timetable.TimetableSlot
 import org.abgehoben.xenon.data.remote.dto.timetable.ClassHour
 import org.abgehoben.xenon.data.repository.util.DateTimeParser
+import java.time.DayOfWeek
 import java.time.LocalDate
+import java.time.format.TextStyle
+import java.util.Locale
 
 object LessonsProcessor {
 
@@ -134,7 +137,7 @@ object LessonsProcessor {
         subsSummary.add(
             SubstitutionSummary(
                 date = date.format(DateTimeParser.GERMAN_DATE_FORMATTER),
-                dayName = DateTimeParser.GERMAN_DAYS_MAP[dayIdx] ?: "",
+                dayName = DayOfWeek.of(dayIdx).getDisplayName(TextStyle.FULL, Locale.getDefault()),
                 hours = "Stunde $hour",
                 cancelled = false,
                 text = "$subject${if (hasRoomChange) " (Raum -> $newRoom)" else ""}${if (comment != null) " -> $comment" else ""}"
@@ -171,7 +174,7 @@ object LessonsProcessor {
         subsSummary.add(
             SubstitutionSummary(
                 date = date.format(DateTimeParser.GERMAN_DATE_FORMATTER),
-                dayName = DateTimeParser.GERMAN_DAYS_MAP[dayIdx] ?: "",
+                dayName = DayOfWeek.of(dayIdx).getDisplayName(TextStyle.FULL, Locale.getDefault()),
                 hours = "Stunde $hour",
                 cancelled = true,
                 text = "$subject [ENTFÄLLT]"
@@ -224,7 +227,7 @@ object LessonsProcessor {
         subsSummary.add(
             SubstitutionSummary(
                 date = date.format(DateTimeParser.GERMAN_DATE_FORMATTER),
-                dayName = DateTimeParser.GERMAN_DAYS_MAP[dayIdx] ?: "",
+                dayName = DayOfWeek.of(dayIdx).getDisplayName(TextStyle.FULL, Locale.getDefault()),
                 hours = "Stunde $hour",
                 cancelled = false,
                 text = "${existing?.course?.let { "$it -> " } ?: ""}${title ?: teachers}${if (rooms.isNotEmpty()) " ($rooms)" else ""}"

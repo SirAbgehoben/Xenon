@@ -8,15 +8,6 @@ object DateTimeParser {
     val ISO_DATE_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
     val GERMAN_DATE_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy")
 
-    //TODO: I do not like that this is language dependant
-    val GERMAN_DAYS_MAP: Map<Int, String> = mapOf(
-        1 to "Montag",
-        2 to "Dienstag",
-        3 to "Mittwoch",
-        4 to "Donnerstag",
-        5 to "Freitag"
-    )
-
     fun parseDateFlexible(dateStr: String?): LocalDate? {
         if (dateStr.isNullOrBlank()) return null
         return try {
