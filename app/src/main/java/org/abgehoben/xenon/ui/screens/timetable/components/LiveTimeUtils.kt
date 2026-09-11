@@ -27,9 +27,11 @@ fun calculateCurrentTimeYOffset(
     totalHours: Int,
     classHours: List<ClassHour>,
     baseHourHeight: Dp,
-    scaleBreaks: Boolean
+    scaleBreaks: Boolean,
+    startHour: Int = 1,
+    periodDurationMinutes: Long = 45L
 ): Dp? {
-    val (firstStartStr, _) = TimetableLayoutUtils.getTimeRangeForHour(1, classHours)
+    val (firstStartStr, _) = TimetableLayoutUtils.getTimeRangeForHour(startHour, classHours)
     val (_, lastEndStr) = TimetableLayoutUtils.getTimeRangeForHour(totalHours, classHours)
 
     val dayStart = runCatching { LocalTime.parse(firstStartStr) }.getOrNull() ?: return null
@@ -38,7 +40,7 @@ fun calculateCurrentTimeYOffset(
     if (now.isBefore(dayStart) || now.isAfter(dayEnd)) return null
 
     var accumulatedY = 0.dp
-    for (h in 1..totalHours) {
+    for (h in startHour..totalHours) {
         val (startStr, endStr) = TimetableLayoutUtils.getTimeRangeForHour(h, classHours)
         val hStart = runCatching { LocalTime.parse(startStr) }.getOrNull() ?: continue
         val hEnd = runCatching { LocalTime.parse(endStr) }.getOrNull() ?: continue
@@ -54,7 +56,12 @@ fun calculateCurrentTimeYOffset(
 
         if (h < totalHours) {
             val breakMin = TimetableLayoutUtils.getBreakMinutesAfter(h, classHours)
-            val gapDp = TimetableLayoutUtils.getBreakGapDp(breakMin, scaleBreaks)
+            val gapDp = TimetableLayoutUtils.getBreakGapDp(
+                breakMinutes = breakMin,
+                scaleBreaks = scaleBreaks,
+                baseHourHeight = baseHourHeight,
+                periodDurationMinutes = periodDurationMinutes
+            )
 
             val nextStartStr = TimetableLayoutUtils.getTimeRangeForHour(h + 1, classHours).first
             val nextStart = runCatching { LocalTime.parse(nextStartStr) }.getOrNull()

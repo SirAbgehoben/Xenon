@@ -12,15 +12,16 @@ object TimetableLayoutUtils {
 
     fun getMergedSlotsForDay(
         daySlots: Map<Int, TimetableSlot?>,
-        maxHours: Int = 9,
-        mergeLessons: Boolean = true
+        maxHours: Int = daySlots.keys.maxOrNull()?.coerceAtLeast(1) ?: 1,
+        mergeLessons: Boolean = true,
+        startHour: Int = 1
     ): List<MergedSlot> {
         if (!mergeLessons) {
-            return (1..maxHours).map { h -> MergedSlot(h, 1, daySlots[h]) }
+            return (startHour..maxHours).map { h -> MergedSlot(h, 1, daySlots[h]) }
         }
 
         val result = mutableListOf<MergedSlot>()
-        var h = 1
+        var h = startHour
         while (h <= maxHours) {
             val current = daySlots[h]
             if (current == null) {
@@ -83,14 +84,39 @@ object TimetableLayoutUtils {
         return 0L
     }
 
-    fun getBreakGapDp(breakMinutes: Long, scaleBreaks: Boolean = true): Dp {
-        if (!scaleBreaks) return 4.dp
-        return when {
-            breakMinutes >= 35 -> 28.dp
-            breakMinutes >= 25 -> 20.dp
-            breakMinutes >= 15 -> 16.dp
-            breakMinutes >= 5  -> 8.dp
-            else               -> 4.dp
+    /**
+     * Resolves the school's standard period duration in minutes.
+     */
+    fun getStandardPeriodDurationMinutes(classHours: List<ClassHour>): Long {
+        for (ch in classHours) {
+            val fromStr = ch.from.take(5)
+            val untilStr = ch.until.take(5)
+            if (fromStr.length >= 5 && untilStr.length >= 5) {
+                val start = runCatching { LocalTime.parse(fromStr) }.getOrNull()
+                val end = runCatching { LocalTime.parse(untilStr) }.getOrNull()
+                if (start != null && end != null) {
+                    val diff = Duration.between(start, end).toMinutes()
+                    if (diff in 30..90) return diff
+                }
+            }
         }
+        return 45L
+    }
+
+    /**
+     * Physically accurate break height calculation.
+     * 1 minute of break = (baseHourHeight / periodDurationMinutes) dp.
+     */
+    fun getBreakGapDp(
+        breakMinutes: Long,
+        scaleBreaks: Boolean = true,
+        baseHourHeight: Dp = 50.dp,
+        periodDurationMinutes: Long = 45L
+    ): Dp {
+        val minGap = 4.dp
+        if (!scaleBreaks || breakMinutes <= 0) return minGap
+        val safeMinutes = periodDurationMinutes.coerceAtLeast(1)
+        val proportionalDp = baseHourHeight * (breakMinutes.toFloat() / safeMinutes.toFloat())
+        return maxOf(minGap, proportionalDp)
     }
 }

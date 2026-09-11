@@ -2,7 +2,6 @@ package org.abgehoben.xenon.ui.screens.timetable
 
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -12,7 +11,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.abgehoben.xenon.R
@@ -30,7 +28,7 @@ import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 
 @Composable
-fun UntisWeeklyGrid( //Todo implement proper scaling
+fun UntisWeeklyGrid(
     grid: TimetableGrid,
     mergeLessons: Boolean = true,
     scaleBreaks: Boolean = true,
@@ -45,13 +43,13 @@ fun UntisWeeklyGrid( //Todo implement proper scaling
     }
 
     val classHours = grid.classHours
+    val minHour = minOf(1, classHours.minOfOrNull { it.number } ?: 1)
     val maxClassHour = classHours.maxOfOrNull { it.number } ?: 0
     val maxLessonHour = grid.grid.values.flatMap { dayMap ->
         dayMap.filterValues { slot -> slot != null }.keys
     }.maxOrNull() ?: 0
-
-    // Use the API's class hours count, only expanding if a lesson exists beyond it
     val totalHours = maxOf(maxClassHour, maxLessonHour).takeIf { it > 0 } ?: 9
+    val hoursCount = totalHours - minHour + 1
 
     val nowTime = rememberLiveTime()
     val today = LocalDate.now()
@@ -61,6 +59,16 @@ fun UntisWeeklyGrid( //Todo implement proper scaling
     val dynamicPrimary = MaterialTheme.colorScheme.primary
     val dynamicPrimaryContainer = MaterialTheme.colorScheme.primaryContainer
     val dynamicOnPrimaryContainer = MaterialTheme.colorScheme.onPrimaryContainer
+
+    val standardPeriodMinutes = remember(classHours) {
+        TimetableLayoutUtils.getStandardPeriodDurationMinutes(classHours)
+    }
+
+    val breakMinutesList = remember(totalHours, minHour, classHours) {
+        (minHour until totalHours).map { h ->
+            TimetableLayoutUtils.getBreakMinutesAfter(h, classHours)
+        }
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
         Surface(
@@ -140,26 +148,68 @@ fun UntisWeeklyGrid( //Todo implement proper scaling
                 .weight(1f)
                 .padding(vertical = Dimens.TimetableBlockGap)
         ) {
-            var totalGaps = 0.dp
-            for (h in 1 until totalHours) {
-                val breakMin = TimetableLayoutUtils.getBreakMinutesAfter(h, classHours)
-                totalGaps += TimetableLayoutUtils.getBreakGapDp(breakMin, scaleBreaks)
-            }
+            val minGap = 4.dp
+            val minHourHeight = 38.dp // Readable threshold for landscape/tiny screens
 
-            val baseHourHeight = maxOf(Dimens.TimetableMinHourHeight, (maxHeight - totalGaps) / totalHours)
+            // Solve for exact baseHourHeight so: (hours * baseHeight + breaks) == maxHeight
+            val (baseHourHeight, isScrollable) = remember(
+                maxHeight,
+                hoursCount,
+                breakMinutesList,
+                scaleBreaks,
+                standardPeriodMinutes
+            ) {
+                if (!scaleBreaks) {
+                    val totalFixedGaps = minGap * breakMinutesList.size
+                    val calculated = (maxHeight - totalFixedGaps) / hoursCount
+                    if (calculated >= minHourHeight) calculated to false else minHourHeight to true
+                } else {
+                    var fixedGapsCount = 0
+                    var scaledRatioSum = 0f
+                    for (b in breakMinutesList) {
+                        if (b <= 0) {
+                            fixedGapsCount++
+                        } else {
+                            scaledRatioSum += b.toFloat() / standardPeriodMinutes.toFloat()
+                        }
+                    }
+                    val totalFixedGaps = minGap * fixedGapsCount
+                    val totalScaleUnits = hoursCount.toFloat() + scaledRatioSum
+                    val calculated = if (totalScaleUnits > 0f) {
+                        (maxHeight - totalFixedGaps) / totalScaleUnits
+                    } else minHourHeight
+
+                    if (calculated >= minHourHeight) calculated to false else minHourHeight to true
+                }
+            }
 
             val liveYOffset = remember(nowTime, baseHourHeight, scaleBreaks) {
-                calculateCurrentTimeYOffset(nowTime, totalHours, classHours, baseHourHeight, scaleBreaks)
+                calculateCurrentTimeYOffset(
+                    now = nowTime,
+                    totalHours = totalHours,
+                    classHours = classHours,
+                    baseHourHeight = baseHourHeight,
+                    scaleBreaks = scaleBreaks,
+                    startHour = minHour,
+                    periodDurationMinutes = standardPeriodMinutes
+                )
             }
 
-            Box(modifier = Modifier.fillMaxSize().verticalScroll(vScrollState)) {
+            val scrollModifier = if (isScrollable) Modifier.verticalScroll(vScrollState) else Modifier
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .then(scrollModifier)
+            ) {
                 Row(modifier = Modifier.fillMaxWidth()) {
                     TimetablePeriodColumn(
-                        startHour = 1,
+                        startHour = minHour,
                         totalHours = totalHours,
                         classHours = classHours,
                         baseHourHeight = baseHourHeight,
                         scaleBreaks = scaleBreaks,
+                        periodDurationMinutes = standardPeriodMinutes,
                         modifier = Modifier.width(Dimens.TimetableTimeColWidth)
                     )
 
@@ -169,14 +219,24 @@ fun UntisWeeklyGrid( //Todo implement proper scaling
                         Row(horizontalArrangement = Arrangement.spacedBy(Dimens.TimetableBlockGap)) {
                             for (d in 1..5) {
                                 val daySlots = grid.grid[d] ?: emptyMap()
-                                val mergedSlots = TimetableLayoutUtils.getMergedSlotsForDay(daySlots, totalHours, mergeLessons)
+                                val mergedSlots = TimetableLayoutUtils.getMergedSlotsForDay(
+                                    daySlots = daySlots,
+                                    maxHours = totalHours,
+                                    mergeLessons = mergeLessons,
+                                    startHour = minHour
+                                )
 
                                 Column(modifier = Modifier.width(Dimens.TimetableColWidth)) {
                                     for (merged in mergedSlots) {
                                         var blockHeight = baseHourHeight * merged.span
                                         for (i in merged.startHour until (merged.startHour + merged.span - 1)) {
                                             val breakMin = TimetableLayoutUtils.getBreakMinutesAfter(i, classHours)
-                                            blockHeight += TimetableLayoutUtils.getBreakGapDp(breakMin, scaleBreaks)
+                                            blockHeight += TimetableLayoutUtils.getBreakGapDp(
+                                                breakMinutes = breakMin,
+                                                scaleBreaks = scaleBreaks,
+                                                baseHourHeight = baseHourHeight,
+                                                periodDurationMinutes = standardPeriodMinutes
+                                            )
                                         }
 
                                         Box(
@@ -194,7 +254,13 @@ fun UntisWeeklyGrid( //Todo implement proper scaling
 
                                         if (merged.endHour < totalHours) {
                                             val breakMin = TimetableLayoutUtils.getBreakMinutesAfter(merged.endHour, classHours)
-                                            Spacer(modifier = Modifier.height(TimetableLayoutUtils.getBreakGapDp(breakMin, scaleBreaks)))
+                                            val breakGap = TimetableLayoutUtils.getBreakGapDp(
+                                                breakMinutes = breakMin,
+                                                scaleBreaks = scaleBreaks,
+                                                baseHourHeight = baseHourHeight,
+                                                periodDurationMinutes = standardPeriodMinutes
+                                            )
+                                            Spacer(modifier = Modifier.height(breakGap))
                                         }
                                     }
                                 }

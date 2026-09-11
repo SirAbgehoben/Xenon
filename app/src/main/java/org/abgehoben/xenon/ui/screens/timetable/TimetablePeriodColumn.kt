@@ -24,7 +24,8 @@ fun TimetablePeriodColumn(
     baseHourHeight: Dp,
     scaleBreaks: Boolean,
     modifier: Modifier = Modifier,
-    startHour: Int = 1
+    startHour: Int = 1,
+    periodDurationMinutes: Long = 45L
 ) {
     Column(modifier = modifier) {
         for (h in startHour..totalHours) {
@@ -39,7 +40,12 @@ fun TimetablePeriodColumn(
 
             if (h < totalHours) {
                 val breakMin = TimetableLayoutUtils.getBreakMinutesAfter(h, classHours)
-                val breakGap = TimetableLayoutUtils.getBreakGapDp(breakMin, scaleBreaks)
+                val breakGap = TimetableLayoutUtils.getBreakGapDp(
+                    breakMinutes = breakMin,
+                    scaleBreaks = scaleBreaks,
+                    baseHourHeight = baseHourHeight,
+                    periodDurationMinutes = periodDurationMinutes
+                )
                 Spacer(modifier = Modifier.height(breakGap))
             }
         }
