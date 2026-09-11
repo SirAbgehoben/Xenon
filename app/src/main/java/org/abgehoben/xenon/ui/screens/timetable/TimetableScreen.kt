@@ -16,7 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import kotlinx.coroutines.launch
 import org.abgehoben.xenon.MainViewModel
-import org.abgehoben.xenon.data.local.model.TimetableViewMode
+import org.abgehoben.xenon.data.model.timetable.TimetableViewMode
 import org.abgehoben.xenon.data.model.timetable.MergedSlot
 import org.abgehoben.xenon.data.model.timetable.TimetableSlot
 import org.abgehoben.xenon.ui.components.LoadingView

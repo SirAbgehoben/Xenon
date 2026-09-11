@@ -24,7 +24,7 @@ import kotlinx.serialization.json.buildJsonObject
 import org.abgehoben.xenon.data.local.SessionManager
 import org.abgehoben.xenon.data.local.SettingsManager
 import org.abgehoben.xenon.data.local.model.ThemeMode
-import org.abgehoben.xenon.data.local.model.TimetableViewMode
+import org.abgehoben.xenon.data.model.timetable.TimetableViewMode
 import org.abgehoben.xenon.data.local.model.UserSettings
 import org.abgehoben.xenon.data.model.calendar.ProcessedEvent
 import org.abgehoben.xenon.data.model.system.CacheStats

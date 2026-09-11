@@ -20,7 +20,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import org.abgehoben.xenon.R
-import org.abgehoben.xenon.data.local.model.TimetableViewMode
+import org.abgehoben.xenon.data.model.timetable.TimetableViewMode
 import org.abgehoben.xenon.ui.theme.Dimens
 
 @Composable

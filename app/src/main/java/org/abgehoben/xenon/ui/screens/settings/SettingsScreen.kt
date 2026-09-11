@@ -21,7 +21,7 @@ import kotlinx.coroutines.launch
 import org.abgehoben.xenon.MainViewModel
 import org.abgehoben.xenon.R
 import org.abgehoben.xenon.data.local.model.ThemeMode
-import org.abgehoben.xenon.data.local.model.TimetableViewMode
+import org.abgehoben.xenon.data.model.timetable.TimetableViewMode
 import org.abgehoben.xenon.ui.screens.settings.components.SettingsClickableItem
 import org.abgehoben.xenon.ui.screens.settings.components.SettingsGroupCard
 import org.abgehoben.xenon.ui.screens.settings.components.SettingsSwitchItem

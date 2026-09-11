@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import org.abgehoben.xenon.data.local.datastore.dataStore
 import org.abgehoben.xenon.data.local.model.ThemeMode
-import org.abgehoben.xenon.data.local.model.TimetableViewMode
+import org.abgehoben.xenon.data.model.timetable.TimetableViewMode
 import org.abgehoben.xenon.data.local.model.UserSettings
 
 class SettingsManager(private val context: Context) {

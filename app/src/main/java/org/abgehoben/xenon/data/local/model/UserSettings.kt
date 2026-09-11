@@ -1,5 +1,7 @@
 package org.abgehoben.xenon.data.local.model
 
+import org.abgehoben.xenon.data.model.timetable.TimetableViewMode
+
 data class UserSettings(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val dynamicColor: Boolean = true,
