@@ -16,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import kotlinx.coroutines.launch
 import org.abgehoben.xenon.MainViewModel
+import org.abgehoben.xenon.data.local.model.TimetableViewMode
 import org.abgehoben.xenon.data.model.timetable.MergedSlot
 import org.abgehoben.xenon.data.model.timetable.TimetableSlot
 import org.abgehoben.xenon.ui.components.LoadingView
@@ -29,7 +30,7 @@ fun TimetableScreen(viewModel: MainViewModel) {
     val timetableGrid by viewModel.timetableGrid.collectAsState()
     val syncError by viewModel.syncError.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
-    val isWeeklyView by viewModel.isWeeklyView.collectAsState()
+    val viewMode by viewModel.timetableViewMode.collectAsState()
     val userSettings by viewModel.userSettings.collectAsState()
     val scope = rememberCoroutineScope()
 
@@ -61,10 +62,10 @@ fun TimetableScreen(viewModel: MainViewModel) {
             TimetableTopBar(
                 calWeek = calWeek,
                 weekType = weekType,
-                isWeeklyView = isWeeklyView,
+                viewMode = viewMode,
                 onPrevWeek = { viewModel.prevWeek() },
                 onNextWeek = { viewModel.nextWeek() },
-                onToggleViewMode = { viewModel.toggleViewMode() }
+                onViewModeChange = { viewModel.setTimetableViewMode(it) }
             )
         }
     ) { innerPadding ->
@@ -93,27 +94,36 @@ fun TimetableScreen(viewModel: MainViewModel) {
                 }
             } else {
                 AnimatedContent(
-                    targetState = isWeeklyView,
+                    targetState = viewMode,
                     transitionSpec = { fadeIn() togetherWith fadeOut() },
                     label = "ViewModeTransition"
-                ) { weekly ->
-                    if (weekly) {
-                        TimetableWeeklyGrid(
-                            grid = timetableGrid!!,
-                            mergeLessons = userSettings.mergeLessons,
-                            scaleBreaks = userSettings.scaleBreaks,
-                            onSlotClick = { d, merged, slot -> selectedSlot = Triple(d, merged, slot) }
-                        )
-                    } else {
-                        DailyListView(
-                            grid = timetableGrid!!,
-                            pagerState = pagerState,
-                            monday = mondayDate,
-                            mergeLessons = userSettings.mergeLessons,
-                            scaleBreaks = userSettings.scaleBreaks,
-                            onTabSelected = { page -> scope.launch { pagerState.animateScrollToPage(page) } },
-                            onSlotClick = { d, merged, slot -> selectedSlot = Triple(d, merged, slot) }
-                        )
+                ) { mode ->
+                    when (mode) {
+                        TimetableViewMode.WEEKLY -> {
+                            TimetableWeeklyGrid(
+                                grid = timetableGrid!!,
+                                mergeLessons = userSettings.mergeLessons,
+                                scaleBreaks = userSettings.scaleBreaks,
+                                onSlotClick = { d, merged, slot -> selectedSlot = Triple(d, merged, slot) },
+                                onDayClick = { dayOffset ->
+                                    scope.launch {
+                                        pagerState.scrollToPage(dayOffset)
+                                    }
+                                    viewModel.setTimetableViewMode(TimetableViewMode.DAILY)
+                                }
+                            )
+                        }
+                        TimetableViewMode.DAILY -> {
+                            DailyListView(
+                                grid = timetableGrid!!,
+                                pagerState = pagerState,
+                                monday = mondayDate,
+                                mergeLessons = userSettings.mergeLessons,
+                                scaleBreaks = userSettings.scaleBreaks,
+                                onTabSelected = { page -> scope.launch { pagerState.animateScrollToPage(page) } },
+                                onSlotClick = { d, merged, slot -> selectedSlot = Triple(d, merged, slot) }
+                            )
+                        }
                     }
                 }
             }

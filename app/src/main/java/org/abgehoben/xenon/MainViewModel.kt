@@ -24,6 +24,7 @@ import kotlinx.serialization.json.buildJsonObject
 import org.abgehoben.xenon.data.local.SessionManager
 import org.abgehoben.xenon.data.local.SettingsManager
 import org.abgehoben.xenon.data.local.model.ThemeMode
+import org.abgehoben.xenon.data.local.model.TimetableViewMode
 import org.abgehoben.xenon.data.local.model.UserSettings
 import org.abgehoben.xenon.data.model.calendar.ProcessedEvent
 import org.abgehoben.xenon.data.model.system.CacheStats
@@ -76,8 +77,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _weekOffset = MutableStateFlow(0)
 
-    private val _isWeeklyView = MutableStateFlow(true)
-    val isWeeklyView: StateFlow<Boolean> = _isWeeklyView
+    private val _timetableViewMode = MutableStateFlow(TimetableViewMode.WEEKLY)
+    val timetableViewMode: StateFlow<TimetableViewMode> = _timetableViewMode
 
     private val _lastScheduleLoadDurationMs = MutableStateFlow<Long?>(null)
     val lastScheduleLoadDurationMs: StateFlow<Long?> = _lastScheduleLoadDurationMs
@@ -93,7 +94,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     init {
         viewModelScope.launch(coroutineExceptionHandler) {
             val settings = settingsManager.userSettings.firstOrNull() ?: UserSettings()
-            _isWeeklyView.value = settings.defaultViewWeekly
+            _timetableViewMode.value = settings.defaultViewMode
 
             val today = LocalDate.now().dayOfWeek
             if (settings.weekendAdvance && (today == DayOfWeek.SATURDAY || today == DayOfWeek.SUNDAY)) {
@@ -235,8 +236,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun setTimetableViewMode(mode: TimetableViewMode) {
+        _timetableViewMode.value = mode
+    }
+
     fun toggleViewMode() {
-        _isWeeklyView.value = !_isWeeklyView.value
+        _timetableViewMode.value = when (_timetableViewMode.value) {
+            TimetableViewMode.WEEKLY -> TimetableViewMode.DAILY
+            TimetableViewMode.DAILY -> TimetableViewMode.WEEKLY
+        }
     }
 
     fun startTieredSync(token: String, forceRefresh: Boolean = false) {
@@ -323,9 +331,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // Settings proxies
     fun setThemeMode(mode: ThemeMode) = viewModelScope.launch { settingsManager.setThemeMode(mode) }
     fun setDynamicColor(enabled: Boolean) = viewModelScope.launch { settingsManager.setDynamicColor(enabled) }
-    fun setDefaultViewWeekly(enabled: Boolean) = viewModelScope.launch {
-        settingsManager.setDefaultViewWeekly(enabled)
-        _isWeeklyView.value = enabled
+    fun setDefaultViewMode(mode: TimetableViewMode) = viewModelScope.launch {
+        settingsManager.setDefaultViewMode(mode)
+        _timetableViewMode.value = mode
     }
     fun setMergeLessons(enabled: Boolean) = viewModelScope.launch { settingsManager.setMergeLessons(enabled) }
     fun setWeekendAdvance(enabled: Boolean) = viewModelScope.launch {

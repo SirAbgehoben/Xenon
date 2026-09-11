@@ -20,16 +20,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import org.abgehoben.xenon.R
+import org.abgehoben.xenon.data.local.model.TimetableViewMode
 import org.abgehoben.xenon.ui.theme.Dimens
 
 @Composable
 fun TimetableTopBar(
     calWeek: String,
     weekType: String,
-    isWeeklyView: Boolean,
+    viewMode: TimetableViewMode,
     onPrevWeek: () -> Unit,
     onNextWeek: () -> Unit,
-    onToggleViewMode: () -> Unit
+    onViewModeChange: (TimetableViewMode) -> Unit
 ) {
     Surface(
         color = MaterialTheme.colorScheme.surface,
@@ -99,19 +100,19 @@ fun TimetableTopBar(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     val gridColor by animateColorAsState(
-                        targetValue = if (isWeeklyView) MaterialTheme.colorScheme.primary else Color.Transparent,
+                        targetValue = if (viewMode == TimetableViewMode.WEEKLY) MaterialTheme.colorScheme.primary else Color.Transparent,
                         label = "gridColor"
                     )
                     val gridIconColor by animateColorAsState(
-                        targetValue = if (isWeeklyView) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        targetValue = if (viewMode == TimetableViewMode.WEEKLY) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                         label = "gridIconColor"
                     )
                     val listColor by animateColorAsState(
-                        targetValue = if (!isWeeklyView) MaterialTheme.colorScheme.primary else Color.Transparent,
+                        targetValue = if (viewMode != TimetableViewMode.WEEKLY) MaterialTheme.colorScheme.primary else Color.Transparent,
                         label = "listColor"
                     )
                     val listIconColor by animateColorAsState(
-                        targetValue = if (!isWeeklyView) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        targetValue = if (viewMode != TimetableViewMode.WEEKLY) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                         label = "listIconColor"
                     )
 
@@ -120,7 +121,7 @@ fun TimetableTopBar(
                             .size(Dimens.PillIndicatorSize)
                             .clip(CircleShape)
                             .background(gridColor)
-                            .clickable { if (!isWeeklyView) onToggleViewMode() },
+                            .clickable { onViewModeChange(TimetableViewMode.WEEKLY) },
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -136,7 +137,7 @@ fun TimetableTopBar(
                             .size(Dimens.PillIndicatorSize)
                             .clip(CircleShape)
                             .background(listColor)
-                            .clickable { if (isWeeklyView) onToggleViewMode() },
+                            .clickable { onViewModeChange(TimetableViewMode.DAILY) },
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(

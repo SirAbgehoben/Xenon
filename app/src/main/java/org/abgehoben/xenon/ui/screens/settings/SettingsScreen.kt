@@ -21,6 +21,7 @@ import kotlinx.coroutines.launch
 import org.abgehoben.xenon.MainViewModel
 import org.abgehoben.xenon.R
 import org.abgehoben.xenon.data.local.model.ThemeMode
+import org.abgehoben.xenon.data.local.model.TimetableViewMode
 import org.abgehoben.xenon.ui.screens.settings.components.SettingsClickableItem
 import org.abgehoben.xenon.ui.screens.settings.components.SettingsGroupCard
 import org.abgehoben.xenon.ui.screens.settings.components.SettingsSwitchItem
@@ -95,9 +96,19 @@ fun SettingsScreen(viewModel: MainViewModel) {
                 SettingsGroupCard(title = stringResource(R.string.section_timetable)) {
                     SettingsClickableItem(
                         title = stringResource(R.string.pref_default_view),
-                        subtitle = stringResource(if (userSettings.defaultViewWeekly) R.string.pref_view_grid else R.string.pref_view_list),
+                        subtitle = stringResource(
+                            if (userSettings.defaultViewMode == TimetableViewMode.WEEKLY) R.string.pref_view_grid
+                            else R.string.pref_view_list
+                        ),
                         icon = Icons.Default.ViewAgenda,
-                        onClick = { viewModel.setDefaultViewWeekly(!userSettings.defaultViewWeekly) }
+                        onClick = {
+                            val nextMode = if (userSettings.defaultViewMode == TimetableViewMode.WEEKLY) {
+                                TimetableViewMode.DAILY
+                            } else {
+                                TimetableViewMode.WEEKLY
+                            }
+                            viewModel.setDefaultViewMode(nextMode)
+                        }
                     )
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
                     SettingsSwitchItem(
