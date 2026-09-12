@@ -15,7 +15,7 @@ import org.abgehoben.xenon.ui.theme.Dimens
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LoginScreen( //TODO fix login button too low
+fun LoginScreen(
     error: String?,
     onLogin: (String, String) -> Unit
 ) {
@@ -23,12 +23,6 @@ fun LoginScreen( //TODO fix login button too low
     var password by rememberSaveable { mutableStateOf("") }
 
     Scaffold(
-        contentWindowInsets = WindowInsets(
-            Dimens.SpacingNone,
-            Dimens.SpacingNone,
-            Dimens.SpacingNone,
-            Dimens.SpacingNone
-        ),
         topBar = {
             TopAppBar(
                 title = {
@@ -37,14 +31,15 @@ fun LoginScreen( //TODO fix login button too low
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Black
                     )
-                },
-                modifier = Modifier.statusBarsPadding()
+                }
             )
         }
     ) { innerPadding ->
         Column(
             modifier = Modifier
                 .padding(innerPadding)
+                .consumeWindowInsets(innerPadding)
+                .imePadding()
                 .fillMaxSize()
                 .padding(horizontal = Dimens.SpacingExtraLarge),
             horizontalAlignment = Alignment.CenterHorizontally
