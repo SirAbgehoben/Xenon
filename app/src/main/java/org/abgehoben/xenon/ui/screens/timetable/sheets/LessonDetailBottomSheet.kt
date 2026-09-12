@@ -1,13 +1,26 @@
-package org.abgehoben.xenon.ui.screens.timetable
+package org.abgehoben.xenon.ui.screens.timetable.sheets
 
 import android.util.Log
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material3.*
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -21,7 +34,7 @@ import org.abgehoben.xenon.R
 import org.abgehoben.xenon.data.model.timetable.MergedSlot
 import org.abgehoben.xenon.data.model.timetable.TimetableSlot
 import org.abgehoben.xenon.data.remote.dto.timetable.ClassHour
-import org.abgehoben.xenon.ui.screens.timetable.util.TimetableLayoutUtils.getTimeRangeForHour
+import org.abgehoben.xenon.ui.screens.timetable.util.TimetableLayoutUtils
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -36,8 +49,8 @@ fun LessonDetailsBottomSheet(
     mondayDate: LocalDate,
     onDismiss: () -> Unit
 ) {
-    val (startTime, _) = getTimeRangeForHour(mergedSlot.startHour, classHours)
-    val (_, endTime) = getTimeRangeForHour(mergedSlot.endHour, classHours)
+    val (startTime, _) = TimetableLayoutUtils.getTimeRangeForHour(mergedSlot.startHour, classHours)
+    val (_, endTime) = TimetableLayoutUtils.getTimeRangeForHour(mergedSlot.endHour, classHours)
     val combinedTime = if (startTime.isNotEmpty() && endTime.isNotEmpty()) "$startTime - $endTime" else ""
     val slotDate = mondayDate.plusDays(dayIndex.toLong() - 1)
 
@@ -86,7 +99,10 @@ fun LessonDetailsBottomSheet(
             IconButton(onClick = {
                 Log.e(TAG, "TODO: implement 3 dot button handling")
             }) {
-                Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.cd_options))
+                Icon(
+                    Icons.Default.MoreVert,
+                    contentDescription = stringResource(R.string.cd_options)
+                )
             }
         }
 
@@ -101,7 +117,12 @@ fun LessonDetailsBottomSheet(
 
         Column(modifier = Modifier.padding(horizontal = 24.dp)) {
             val titleText = when {
-                slot.cancelled && slot.substitution != null -> stringResource(R.string.cancelled_substitution_title, slot.course, slot.substitution)
+                slot.cancelled && slot.substitution != null -> stringResource(
+                    R.string.cancelled_substitution_title,
+                    slot.course,
+                    slot.substitution
+                )
+
                 slot.cancelled -> stringResource(R.string.cancelled_prefix, slot.course)
                 slot.substitution != null -> slot.substitution
                 else -> slot.course
@@ -141,7 +162,8 @@ fun LessonDetailsBottomSheet(
             }
 
             val effectiveNewRoom = slot.subRoom ?: slot.newRoom
-            val hasRealRoomChange = effectiveNewRoom != null && slot.room.isNotEmpty() && effectiveNewRoom != slot.room
+            val hasRealRoomChange =
+                effectiveNewRoom != null && slot.room.isNotEmpty() && effectiveNewRoom != slot.room
 
             if (slot.cancelled || isSubstitution) {
                 Spacer(modifier = Modifier.height(24.dp))
@@ -165,14 +187,21 @@ fun LessonDetailsBottomSheet(
                         )
                         if (slot.substitution != null) {
                             Text(
-                                text = stringResource(R.string.replacement_prefix, slot.substitution),
+                                text = stringResource(
+                                    R.string.replacement_prefix,
+                                    slot.substitution
+                                ),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.SemiBold
                             )
                         }
                         if (hasRealRoomChange) {
                             Text(
-                                text = stringResource(R.string.room_change_format, slot.room, effectiveNewRoom),
+                                text = stringResource(
+                                    R.string.room_change_format,
+                                    slot.room,
+                                    effectiveNewRoom
+                                ),
                                 style = MaterialTheme.typography.bodyMedium
                             )
                         }

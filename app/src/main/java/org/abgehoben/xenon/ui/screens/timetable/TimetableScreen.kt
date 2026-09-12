@@ -17,24 +17,58 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import kotlinx.coroutines.launch
-import org.abgehoben.xenon.data.model.timetable.TimetableViewMode
+import org.abgehoben.xenon.data.local.model.UserSettings
 import org.abgehoben.xenon.data.model.timetable.MergedSlot
+import org.abgehoben.xenon.data.model.timetable.TimetableGrid
 import org.abgehoben.xenon.data.model.timetable.TimetableSlot
+import org.abgehoben.xenon.data.model.timetable.TimetableViewMode
 import org.abgehoben.xenon.ui.components.LoadingView
 import org.abgehoben.xenon.ui.components.SyncErrorState
+import org.abgehoben.xenon.ui.screens.timetable.components.TimetableTopBar
+import org.abgehoben.xenon.ui.screens.timetable.sheets.LessonDetailsBottomSheet
+import org.abgehoben.xenon.ui.screens.timetable.views.DailyListView
+import org.abgehoben.xenon.ui.screens.timetable.views.TimetableWeeklyGrid
 import org.abgehoben.xenon.ui.theme.Dimens
+import org.koin.androidx.compose.koinViewModel
 import java.time.LocalDate
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun TimetableScreen(viewModel: TimetableViewModel) {
+fun TimetableRoute(
+    viewModel: TimetableViewModel = koinViewModel()
+) {
     val timetableGrid by viewModel.timetableGrid.collectAsState()
     val syncError by viewModel.syncError.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
     val viewMode by viewModel.timetableViewMode.collectAsState()
     val userSettings by viewModel.userSettings.collectAsState()
-    val scope = rememberCoroutineScope()
 
+    TimetableScreen(
+        grid = timetableGrid,
+        syncError = syncError,
+        isRefreshing = isRefreshing,
+        viewMode = viewMode,
+        userSettings = userSettings,
+        onPrevWeek = viewModel::prevWeek,
+        onNextWeek = viewModel::nextWeek,
+        onRefresh = { viewModel.refreshData(forceRefresh = true) },
+        onViewModeChange = viewModel::setTimetableViewMode
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+fun TimetableScreen(
+    grid: TimetableGrid?,
+    syncError: String?,
+    isRefreshing: Boolean,
+    viewMode: TimetableViewMode,
+    userSettings: UserSettings,
+    onPrevWeek: () -> Unit,
+    onNextWeek: () -> Unit,
+    onRefresh: () -> Unit,
+    onViewModeChange: (TimetableViewMode) -> Unit
+) {
+    val scope = rememberCoroutineScope()
     var selectedSlot by remember { mutableStateOf<Triple<Int, MergedSlot, TimetableSlot>?>(null) }
     val sheetState = rememberBottomSheetState(
         initialValue = SheetValue.Hidden,
@@ -48,9 +82,9 @@ fun TimetableScreen(viewModel: TimetableViewModel) {
     val pagerState = rememberPagerState(initialPage = initialPage, pageCount = { 5 })
     val pullToRefreshState = rememberPullToRefreshState()
 
-    val calWeek = timetableGrid?.calWeek?.toString() ?: ""
-    val weekType = timetableGrid?.weekType ?: ""
-    val mondayDate = timetableGrid?.mondayDate ?: LocalDate.now()
+    val calWeek = grid?.calWeek?.toString() ?: ""
+    val weekType = grid?.weekType ?: ""
+    val mondayDate = grid?.mondayDate ?: LocalDate.now()
 
     Scaffold(
         contentWindowInsets = WindowInsets(
@@ -64,16 +98,16 @@ fun TimetableScreen(viewModel: TimetableViewModel) {
                 calWeek = calWeek,
                 weekType = weekType,
                 viewMode = viewMode,
-                onPrevWeek = { viewModel.prevWeek() },
-                onNextWeek = { viewModel.nextWeek() },
-                onViewModeChange = { viewModel.setTimetableViewMode(it) }
+                onPrevWeek = onPrevWeek,
+                onNextWeek = onNextWeek,
+                onViewModeChange = onViewModeChange
             )
         }
     ) { innerPadding ->
         PullToRefreshBox(
             state = pullToRefreshState,
             isRefreshing = isRefreshing,
-            onRefresh = { viewModel.refreshData(forceRefresh = true) },
+            onRefresh = onRefresh,
             indicator = {
                 PullToRefreshDefaults.LoadingIndicator(
                     state = pullToRefreshState,
@@ -85,7 +119,7 @@ fun TimetableScreen(viewModel: TimetableViewModel) {
                 .padding(innerPadding)
                 .fillMaxSize()
         ) {
-            if (timetableGrid == null) {
+            if (grid == null) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -93,7 +127,7 @@ fun TimetableScreen(viewModel: TimetableViewModel) {
                     contentAlignment = Alignment.Center
                 ) {
                     if (syncError != null) {
-                        SyncErrorState(error = syncError!!, onRetry = viewModel::refreshData)
+                        SyncErrorState(error = syncError, onRetry = onRefresh)
                     } else {
                         LoadingView()
                     }
@@ -107,21 +141,19 @@ fun TimetableScreen(viewModel: TimetableViewModel) {
                     when (mode) {
                         TimetableViewMode.WEEKLY -> {
                             TimetableWeeklyGrid(
-                                grid = timetableGrid!!,
+                                grid = grid,
                                 mergeLessons = userSettings.mergeLessons,
                                 scaleBreaks = userSettings.scaleBreaks,
                                 onSlotClick = { d, merged, slot -> selectedSlot = Triple(d, merged, slot) },
                                 onDayClick = { dayOffset ->
-                                    scope.launch {
-                                        pagerState.scrollToPage(dayOffset)
-                                    }
-                                    viewModel.setTimetableViewMode(TimetableViewMode.DAILY)
+                                    scope.launch { pagerState.scrollToPage(dayOffset) }
+                                    onViewModeChange(TimetableViewMode.DAILY)
                                 }
                             )
                         }
                         TimetableViewMode.DAILY -> {
                             DailyListView(
-                                grid = timetableGrid!!,
+                                grid = grid,
                                 pagerState = pagerState,
                                 monday = mondayDate,
                                 mergeLessons = userSettings.mergeLessons,
@@ -148,7 +180,7 @@ fun TimetableScreen(viewModel: TimetableViewModel) {
                     dayIndex = d,
                     mergedSlot = merged,
                     slot = slot,
-                    classHours = timetableGrid?.classHours ?: emptyList(),
+                    classHours = grid?.classHours ?: emptyList(),
                     mondayDate = mondayDate,
                     onDismiss = {
                         scope.launch { sheetState.hide() }.invokeOnCompletion {

@@ -1,8 +1,22 @@
-package org.abgehoben.xenon.ui.screens.timetable
+package org.abgehoben.xenon.ui.screens.timetable.views
 
-import androidx.compose.foundation.*
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -155,7 +169,11 @@ fun TimetableWeeklyGrid(
                                     for (merged in mergedSlots) {
                                         var blockHeight = baseHourHeight * merged.span
                                         for (i in merged.startHour until (merged.startHour + merged.span - 1)) {
-                                            val breakMin = TimetableLayoutUtils.getBreakMinutesAfter(i, classHours)
+                                            val breakMin =
+                                                TimetableLayoutUtils.getBreakMinutesAfter(
+                                                    i,
+                                                    classHours
+                                                )
                                             blockHeight += TimetableLayoutUtils.getBreakGapDp(
                                                 breakMinutes = breakMin,
                                                 scaleBreaks = scaleBreaks,
@@ -169,7 +187,11 @@ fun TimetableWeeklyGrid(
                                                 .height(blockHeight)
                                                 .fillMaxWidth()
                                                 .clickable(enabled = merged.slot != null) {
-                                                    if (merged.slot != null) onSlotClick(d, merged, merged.slot)
+                                                    if (merged.slot != null) onSlotClick(
+                                                        d,
+                                                        merged,
+                                                        merged.slot
+                                                    )
                                                 }
                                         ) {
                                             if (merged.slot != null) {
@@ -178,7 +200,11 @@ fun TimetableWeeklyGrid(
                                         }
 
                                         if (merged.endHour < totalHours) {
-                                            val breakMin = TimetableLayoutUtils.getBreakMinutesAfter(merged.endHour, classHours)
+                                            val breakMin =
+                                                TimetableLayoutUtils.getBreakMinutesAfter(
+                                                    merged.endHour,
+                                                    classHours
+                                                )
                                             val breakGap = TimetableLayoutUtils.getBreakGapDp(
                                                 breakMinutes = breakMin,
                                                 scaleBreaks = scaleBreaks,

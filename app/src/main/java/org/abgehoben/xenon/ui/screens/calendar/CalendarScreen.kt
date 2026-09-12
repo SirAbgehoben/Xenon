@@ -16,18 +16,42 @@ import kotlinx.coroutines.launch
 import org.abgehoben.xenon.R
 import org.abgehoben.xenon.data.model.calendar.ProcessedEvent
 import org.abgehoben.xenon.ui.components.SyncErrorState
+import org.abgehoben.xenon.ui.screens.calendar.components.CalendarGrid
+import org.abgehoben.xenon.ui.screens.calendar.components.EventListItem
+import org.abgehoben.xenon.ui.screens.calendar.components.MonthSelector
+import org.abgehoben.xenon.ui.screens.calendar.sheets.EventDetailsBottomSheet
 import org.abgehoben.xenon.ui.theme.Dimens
+import org.koin.androidx.compose.koinViewModel
 import java.time.LocalDate
 import java.time.YearMonth
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun CalendarScreen(viewModel: CalendarViewModel) {
+fun CalendarRoute(
+    viewModel: CalendarViewModel = koinViewModel()
+) {
     val eventsByDay by viewModel.calendarEvents.collectAsState()
     val syncError by viewModel.syncError.collectAsState()
     val isSyncing by viewModel.isSyncing.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
 
+    CalendarScreen(
+        eventsByDay = eventsByDay,
+        syncError = syncError,
+        isSyncing = isSyncing,
+        isRefreshing = isRefreshing,
+        onRefresh = { viewModel.refreshData(forceRefresh = true) }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+fun CalendarScreen(
+    eventsByDay: Map<LocalDate, List<ProcessedEvent>>,
+    syncError: String?,
+    isSyncing: Boolean,
+    isRefreshing: Boolean,
+    onRefresh: () -> Unit
+) {
     var selectedDate by remember { mutableStateOf(LocalDate.now()) }
     var currentMonth by remember { mutableStateOf(YearMonth.now()) }
 
@@ -69,7 +93,7 @@ fun CalendarScreen(viewModel: CalendarViewModel) {
         PullToRefreshBox(
             state = pullToRefreshState,
             isRefreshing = isRefreshing,
-            onRefresh = { viewModel.refreshData(forceRefresh = true) },
+            onRefresh = onRefresh,
             indicator = {
                 PullToRefreshDefaults.LoadingIndicator(
                     state = pullToRefreshState,
@@ -83,7 +107,7 @@ fun CalendarScreen(viewModel: CalendarViewModel) {
         ) {
             if (eventsByDay.isEmpty() && syncError != null && !isSyncing) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    SyncErrorState(error = syncError!!, onRetry = { viewModel.refreshData() })
+                    SyncErrorState(error = syncError, onRetry = onRefresh)
                 }
             } else {
                 LazyColumn(

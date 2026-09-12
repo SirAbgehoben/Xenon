@@ -1,7 +1,18 @@
-package org.abgehoben.xenon.ui.screens.timetable
+package org.abgehoben.xenon.ui.screens.timetable.views
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
@@ -12,8 +23,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.EventBusy
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Tab
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -25,6 +42,7 @@ import org.abgehoben.xenon.R
 import org.abgehoben.xenon.data.model.timetable.MergedSlot
 import org.abgehoben.xenon.data.model.timetable.TimetableGrid
 import org.abgehoben.xenon.data.model.timetable.TimetableSlot
+import org.abgehoben.xenon.ui.screens.timetable.components.CompactLessonCard
 import org.abgehoben.xenon.ui.screens.timetable.components.rememberLiveTime
 import org.abgehoben.xenon.ui.screens.timetable.util.TimetableLayoutUtils
 import org.abgehoben.xenon.ui.theme.Dimens
@@ -91,15 +109,18 @@ fun DailyListView(
             val daySlots = grid.grid[dayIdx] ?: emptyMap()
             val activeSlots = daySlots.values.filterNotNull()
 
-            val isFullDayEvent = activeSlots.isNotEmpty() && activeSlots.size >= 5 && activeSlots.all {
-                it.isHoliday || it.course == activeSlots.first().course
-            }
+            val isFullDayEvent =
+                activeSlots.isNotEmpty() && activeSlots.size >= 5 && activeSlots.all {
+                    it.isHoliday || it.course == activeSlots.first().course
+                }
 
             val daySubs = grid.substitutions.filter { sub ->
                 val subDate = try {
                     if (sub.date.contains("-")) LocalDate.parse(sub.date)
                     else LocalDate.parse(sub.date, DateTimeFormatter.ofPattern("dd.MM.yyyy"))
-                } catch (_: Exception) { null }
+                } catch (_: Exception) {
+                    null
+                }
                 subDate?.dayOfWeek?.value == dayIdx
             }.distinctBy { it.text }
 
@@ -108,7 +129,9 @@ fun DailyListView(
                 daySlots.filterValues { it != null }.keys.maxOrNull() ?: 0
             ).takeIf { it > 0 } ?: 9
 
-            val mergedSlots = TimetableLayoutUtils.getMergedSlotsForDay(daySlots, maxDayHour, mergeLessons).filter { it.slot != null }
+            val mergedSlots =
+                TimetableLayoutUtils.getMergedSlotsForDay(daySlots, maxDayHour, mergeLessons)
+                    .filter { it.slot != null }
 
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
@@ -119,7 +142,9 @@ fun DailyListView(
                     item {
                         Surface(
                             shape = RoundedCornerShape(Dimens.RadiusCard),
-                            color = if (first.isHoliday) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.7f),
+                            color = if (first.isHoliday) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.errorContainer.copy(
+                                alpha = 0.7f
+                            ),
                             tonalElevation = Dimens.ElevationLevel2,
                             modifier = Modifier.fillMaxWidth()
                         ) {
@@ -145,7 +170,9 @@ fun DailyListView(
                                 Text(
                                     text = stringResource(R.string.full_day_no_school),
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = if (first.isHoliday) MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f)
+                                    color = if (first.isHoliday) MaterialTheme.colorScheme.onTertiaryContainer.copy(
+                                        alpha = 0.8f
+                                    ) else MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f)
                                 )
                             }
                         }
@@ -156,7 +183,7 @@ fun DailyListView(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(vertical = Dimens.SpacingLarge),
-                            shape = RoundedCornerShape(Dimens.RadiusLarge),
+                            shape = androidx.compose.foundation.shape.RoundedCornerShape(Dimens.RadiusLarge),
                             color = MaterialTheme.colorScheme.surfaceContainerHigh
                         ) {
                             Text(
@@ -172,8 +199,14 @@ fun DailyListView(
                     }
                 } else {
                     itemsIndexed(mergedSlots) { index, merged ->
-                        val (startStr, _) = TimetableLayoutUtils.getTimeRangeForHour(merged.startHour, classHours)
-                        val (_, endStr) = TimetableLayoutUtils.getTimeRangeForHour(merged.endHour, classHours)
+                        val (startStr, _) = TimetableLayoutUtils.getTimeRangeForHour(
+                            merged.startHour,
+                            classHours
+                        )
+                        val (_, endStr) = TimetableLayoutUtils.getTimeRangeForHour(
+                            merged.endHour,
+                            classHours
+                        )
                         val lessonStart = runCatching { LocalTime.parse(startStr) }.getOrNull()
                         val lessonEnd = runCatching { LocalTime.parse(endStr) }.getOrNull()
 
@@ -181,7 +214,8 @@ fun DailyListView(
                                 !nowTime.isBefore(lessonStart) && !nowTime.isAfter(lessonEnd)
 
                         val currentProgress = if (isCurrentLesson) {
-                            val totalSec = Duration.between(lessonStart, lessonEnd).seconds.coerceAtLeast(1)
+                            val totalSec =
+                                Duration.between(lessonStart, lessonEnd).seconds.coerceAtLeast(1)
                             val elapsedSec = Duration.between(lessonStart, nowTime).seconds
                             (elapsedSec.toFloat() / totalSec).coerceIn(0f, 1f)
                         } else 0f
@@ -196,17 +230,26 @@ fun DailyListView(
 
                         if (index < mergedSlots.size - 1) {
                             val nextMerged = mergedSlots[index + 1]
-                            val breakMin = TimetableLayoutUtils.getBreakMinutesAfter(merged.endHour, classHours)
+                            val breakMin = TimetableLayoutUtils.getBreakMinutesAfter(
+                                merged.endHour,
+                                classHours
+                            )
                             val gapDp = TimetableLayoutUtils.getBreakGapDp(breakMin, scaleBreaks)
 
-                            val nextStartStr = TimetableLayoutUtils.getTimeRangeForHour(nextMerged.startHour, classHours).first
-                            val nextStart = runCatching { LocalTime.parse(nextStartStr) }.getOrNull()
+                            val nextStartStr = TimetableLayoutUtils.getTimeRangeForHour(
+                                nextMerged.startHour,
+                                classHours
+                            ).first
+                            val nextStart =
+                                runCatching { LocalTime.parse(nextStartStr) }.getOrNull()
 
-                            val isCurrentBreak = isToday && lessonEnd != null && nextStart != null &&
-                                    nowTime.isAfter(lessonEnd) && nowTime.isBefore(nextStart)
+                            val isCurrentBreak =
+                                isToday && lessonEnd != null && nextStart != null &&
+                                        nowTime.isAfter(lessonEnd) && nowTime.isBefore(nextStart)
 
                             val breakProgress = if (isCurrentBreak) {
-                                val totalSec = Duration.between(lessonEnd, nextStart).seconds.coerceAtLeast(1)
+                                val totalSec =
+                                    Duration.between(lessonEnd, nextStart).seconds.coerceAtLeast(1)
                                 val elapsedSec = Duration.between(lessonEnd, nowTime).seconds
                                 (elapsedSec.toFloat() / totalSec).coerceIn(0f, 1f)
                             } else 0f
@@ -255,7 +298,7 @@ fun DailyListView(
                     itemsIndexed(daySubs) { subIdx, sub ->
                         Surface(
                             modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(Dimens.RadiusMedium),
+                            shape = androidx.compose.foundation.shape.RoundedCornerShape(Dimens.RadiusMedium),
                             color = MaterialTheme.colorScheme.surfaceContainerHigh,
                             tonalElevation = Dimens.ElevationLevel1
                         ) {

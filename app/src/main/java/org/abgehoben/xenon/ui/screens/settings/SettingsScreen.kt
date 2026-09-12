@@ -20,22 +20,67 @@ import androidx.compose.ui.text.font.FontWeight
 import kotlinx.coroutines.launch
 import org.abgehoben.xenon.R
 import org.abgehoben.xenon.data.local.model.ThemeMode
+import org.abgehoben.xenon.data.local.model.UserSettings
+import org.abgehoben.xenon.data.model.system.CacheStats
 import org.abgehoben.xenon.data.model.timetable.TimetableViewMode
 import org.abgehoben.xenon.ui.screens.settings.components.SettingsClickableItem
 import org.abgehoben.xenon.ui.screens.settings.components.SettingsGroupCard
 import org.abgehoben.xenon.ui.screens.settings.components.SettingsSwitchItem
 import org.abgehoben.xenon.ui.screens.settings.dialogs.*
 import org.abgehoben.xenon.ui.theme.Dimens
+import org.koin.androidx.compose.koinViewModel
+
+@Composable
+fun SettingsRoute(
+    onLogout: () -> Unit,
+    viewModel: SettingsViewModel = koinViewModel()
+) {
+    val userSettings by viewModel.userSettings.collectAsState()
+    val activeToken by viewModel.jwtToken.collectAsState()
+
+    SettingsScreen(
+        userSettings = userSettings,
+        activeToken = activeToken,
+        lastScheduleLoadDurationMs = viewModel.lastScheduleLoadDurationMs,
+        onSetThemeMode = viewModel::setThemeMode,
+        onSetDynamicColor = viewModel::setDynamicColor,
+        onSetDefaultViewMode = viewModel::setDefaultViewMode,
+        onSetMergeLessons = viewModel::setMergeLessons,
+        onSetWeekendAdvance = viewModel::setWeekendAdvance,
+        onSetScaleBreaks = viewModel::setScaleBreaks,
+        onSetPreloadWeeks = viewModel::setPreloadWeeks,
+        onClearAppCache = viewModel::clearAppCache,
+        onFetchIcalUrl = viewModel::fetchIcalUrl,
+        onGetCacheStats = viewModel::getTimetableCacheStats,
+        onPingServer = viewModel::pingServer,
+        onDecodeJwt = viewModel::decodeJwtPayload,
+        onLogout = {
+            viewModel.logout()
+            onLogout()
+        }
+    )
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    viewModel: SettingsViewModel,
-    onLogout: () -> Unit = {}
+    userSettings: UserSettings,
+    activeToken: String?,
+    lastScheduleLoadDurationMs: Long?,
+    onSetThemeMode: (ThemeMode) -> Unit,
+    onSetDynamicColor: (Boolean) -> Unit,
+    onSetDefaultViewMode: (TimetableViewMode) -> Unit,
+    onSetMergeLessons: (Boolean) -> Unit,
+    onSetWeekendAdvance: (Boolean) -> Unit,
+    onSetScaleBreaks: (Boolean) -> Unit,
+    onSetPreloadWeeks: (Boolean) -> Unit,
+    onClearAppCache: () -> Unit,
+    onFetchIcalUrl: suspend (Boolean) -> String?,
+    onGetCacheStats: () -> CacheStats,
+    onPingServer: suspend () -> Pair<Boolean, Long>,
+    onDecodeJwt: (String?) -> String?,
+    onLogout: () -> Unit
 ) {
-    val userSettings by viewModel.userSettings.collectAsState()
-    val activeToken by viewModel.jwtToken.collectAsState()
-    val lastScheduleLoadDurationMs = viewModel.lastScheduleLoadDurationMs
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val clipboard = LocalClipboard.current
@@ -106,7 +151,7 @@ fun SettingsScreen(
                             } else {
                                 TimetableViewMode.WEEKLY
                             }
-                            viewModel.setDefaultViewMode(nextMode)
+                            onSetDefaultViewMode(nextMode)
                         }
                     )
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
@@ -115,7 +160,7 @@ fun SettingsScreen(
                         description = stringResource(R.string.pref_merge_lessons_desc),
                         icon = Icons.Default.Layers,
                         checked = userSettings.mergeLessons,
-                        onCheckedChange = { viewModel.setMergeLessons(it) }
+                        onCheckedChange = onSetMergeLessons
                     )
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
                     SettingsSwitchItem(
@@ -123,7 +168,7 @@ fun SettingsScreen(
                         description = stringResource(R.string.pref_weekend_advance_desc),
                         icon = Icons.Default.DateRange,
                         checked = userSettings.weekendAdvance,
-                        onCheckedChange = { viewModel.setWeekendAdvance(it) }
+                        onCheckedChange = onSetWeekendAdvance
                     )
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
                     SettingsSwitchItem(
@@ -131,7 +176,7 @@ fun SettingsScreen(
                         description = stringResource(R.string.pref_scale_breaks_desc),
                         icon = Icons.Default.FormatLineSpacing,
                         checked = userSettings.scaleBreaks,
-                        onCheckedChange = { viewModel.setScaleBreaks(it) }
+                        onCheckedChange = onSetScaleBreaks
                     )
                 }
             }
@@ -166,7 +211,7 @@ fun SettingsScreen(
                         description = stringResource(R.string.pref_dynamic_color_desc),
                         icon = Icons.Default.Palette,
                         checked = userSettings.dynamicColor,
-                        onCheckedChange = { viewModel.setDynamicColor(it) }
+                        onCheckedChange = onSetDynamicColor
                     )
                 }
             }
@@ -178,7 +223,7 @@ fun SettingsScreen(
                         subtitle = stringResource(R.string.pref_clear_cache_desc),
                         icon = Icons.Default.CleaningServices,
                         onClick = {
-                            viewModel.clearAppCache()
+                            onClearAppCache()
                             Toast.makeText(context, cacheClearedMsg, Toast.LENGTH_SHORT).show()
                         }
                     )
@@ -188,7 +233,7 @@ fun SettingsScreen(
                         description = stringResource(R.string.pref_preload_weeks_desc),
                         icon = Icons.Default.CloudSync,
                         checked = userSettings.preloadWeeks,
-                        onCheckedChange = { viewModel.setPreloadWeeks(it) }
+                        onCheckedChange = onSetPreloadWeeks
                     )
                 }
             }
@@ -251,7 +296,7 @@ fun SettingsScreen(
     if (showThemeDialog) {
         ThemeSelectionDialog(
             currentTheme = userSettings.themeMode,
-            onSelectTheme = viewModel::setThemeMode,
+            onSelectTheme = onSetThemeMode,
             onDismiss = { showThemeDialog = false }
         )
     }
@@ -263,7 +308,7 @@ fun SettingsScreen(
     if (showIcalDialog) {
         LaunchedEffect(Unit) {
             isLoadingIcal = true
-            icalUrl = viewModel.fetchIcalUrl(renew = false)
+            icalUrl = onFetchIcalUrl(false)
             isLoadingIcal = false
         }
 
@@ -273,7 +318,7 @@ fun SettingsScreen(
             onRotateToken = {
                 scope.launch {
                     isLoadingIcal = true
-                    icalUrl = viewModel.fetchIcalUrl(renew = true)
+                    icalUrl = onFetchIcalUrl(true)
                     isLoadingIcal = false
                     Toast.makeText(context, icalTokenRotatedMsg, Toast.LENGTH_SHORT).show()
                 }
@@ -293,7 +338,7 @@ fun SettingsScreen(
         LogoutConfirmationDialog(
             onConfirm = {
                 showLogoutDialog = false
-                viewModel.logout()
+                onLogout()
             },
             onDismiss = { showLogoutDialog = false }
         )
@@ -302,11 +347,11 @@ fun SettingsScreen(
     if (showDebugDialog) {
         DebugDialog(
             jwtToken = activeToken,
-            decodedJwtJson = remember(activeToken) { viewModel.decodeJwtPayload(activeToken) },
+            decodedJwtJson = remember(activeToken) { onDecodeJwt(activeToken) },
             bundleVersion = "PLACEHOLDER", //TODO
-            cacheStats = remember { viewModel.getTimetableCacheStats() },
+            cacheStats = remember { onGetCacheStats() },
             lastScheduleLoadDurationMs = lastScheduleLoadDurationMs,
-            onPingServer = { viewModel.pingServer() },
+            onPingServer = onPingServer,
             onDismiss = { showDebugDialog = false }
         )
     }
