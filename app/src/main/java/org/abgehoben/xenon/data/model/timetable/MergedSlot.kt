@@ -5,4 +5,7 @@ data class MergedSlot(
     val span: Int,
     val slot: TimetableSlot?,
     val endHour: Int = startHour + span - 1
-)
+) {
+    val status: LessonStatus
+        get() = slot?.status ?: LessonStatus.FREE_PERIOD
+}

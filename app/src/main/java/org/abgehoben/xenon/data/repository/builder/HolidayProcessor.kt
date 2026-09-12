@@ -1,5 +1,6 @@
 package org.abgehoben.xenon.data.repository.builder
 
+import org.abgehoben.xenon.data.model.timetable.LessonStatus
 import org.abgehoben.xenon.data.model.timetable.TimetableSlot
 import org.abgehoben.xenon.data.remote.dto.calendar.CalendarResponse
 import org.abgehoben.xenon.data.repository.util.DateTimeParser
@@ -64,12 +65,12 @@ object HolidayProcessor {
                 if (!dayDate.isBefore(startDate) && !dayDate.isAfter(endDate)) {
                     val dayMap = grid[day] ?: continue
                     for (hour in dayMap.keys) {
-                        if (dayMap[hour] == null || dayMap[hour]?.isHoliday == true) {
+                        if (dayMap[hour] == null || dayMap[hour]?.status == LessonStatus.HOLIDAY) {
                             dayMap[hour] = TimetableSlot(
                                 course = holidayTitle,
                                 teacher = "",
                                 room = "",
-                                isHoliday = true
+                                status = LessonStatus.HOLIDAY
                             )
                         }
                     }

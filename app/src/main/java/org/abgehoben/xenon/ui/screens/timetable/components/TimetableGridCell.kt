@@ -1,19 +1,7 @@
 package org.abgehoben.xenon.ui.screens.timetable.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -33,35 +21,22 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.abgehoben.xenon.R
+import org.abgehoben.xenon.data.model.timetable.LessonStatus
 import org.abgehoben.xenon.data.model.timetable.TimetableSlot
+import org.abgehoben.xenon.ui.screens.timetable.util.colors
 import org.abgehoben.xenon.ui.theme.Dimens
-import org.abgehoben.xenon.ui.theme.StatusSubstitution
 
 @Composable
 fun TimetableGridCell(slot: TimetableSlot, span: Int = 1) {
-    val isSubstitution = slot.substitution != null || slot.newRoom != null || slot.subRoom != null
-
-    val accentColor = when {
-        slot.isHoliday -> MaterialTheme.colorScheme.tertiary
-        slot.cancelled && !isSubstitution -> MaterialTheme.colorScheme.error
-        isSubstitution -> StatusSubstitution
-        else -> MaterialTheme.colorScheme.primary
-    }
-
-    val bgColor = when {
-        slot.isHoliday -> MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.35f)
-        slot.cancelled && !isSubstitution -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.45f)
-        isSubstitution -> MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f)
-        else -> MaterialTheme.colorScheme.surfaceContainerHigh
-    }
+    val colors = slot.status.colors()
 
     Surface(
         modifier = Modifier.fillMaxSize(),
         shape = RoundedCornerShape(Dimens.RadiusMedium),
-        color = bgColor,
+        color = colors.container,
         tonalElevation = 1.dp
     ) {
-        if (slot.isHoliday) { //TODO: fix text color too samey as surface container
+        if (slot.status == LessonStatus.HOLIDAY) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -73,7 +48,7 @@ fun TimetableGridCell(slot: TimetableSlot, span: Int = 1) {
                         Icon(
                             Icons.Default.CalendarToday,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onTertiaryContainer,
+                            tint = colors.onContainer,
                             modifier = Modifier.size(Dimens.IconSizeMedium)
                         )
                         Spacer(modifier = Modifier.height(Dimens.SpacingSmall))
@@ -84,7 +59,7 @@ fun TimetableGridCell(slot: TimetableSlot, span: Int = 1) {
                             fontSize = if (span >= 2) 11.5.sp else 9.sp,
                             fontWeight = FontWeight.Black
                         ),
-                        color = MaterialTheme.colorScheme.onTertiaryContainer,
+                        color = colors.onContainer,
                         textAlign = TextAlign.Center,
                         maxLines = if (span >= 2) 4 else 2,
                         overflow = TextOverflow.Ellipsis
@@ -99,7 +74,7 @@ fun TimetableGridCell(slot: TimetableSlot, span: Int = 1) {
                         .width(3.5.dp)
                         .fillMaxHeight(0.75f)
                         .clip(CircleShape)
-                        .background(accentColor)
+                        .background(colors.accent)
                 )
 
                 Column(
@@ -117,7 +92,7 @@ fun TimetableGridCell(slot: TimetableSlot, span: Int = 1) {
                         verticalAlignment = Alignment.Top
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            if (slot.cancelled) {
+                            if (slot.status == LessonStatus.CANCELLED) {
                                 Text(
                                     text = stringResource(R.string.cancelled_prefix, slot.course),
                                     style = MaterialTheme.typography.labelSmall.copy(
@@ -129,8 +104,7 @@ fun TimetableGridCell(slot: TimetableSlot, span: Int = 1) {
                                     overflow = TextOverflow.Ellipsis
                                 )
                             }
-                            val displayText =
-                                slot.substitution ?: if (!slot.cancelled) slot.course else null
+                            val displayText = slot.substitution ?: if (slot.status != LessonStatus.CANCELLED) slot.course else null
                             if (displayText != null) {
                                 Text(
                                     text = displayText,
@@ -175,7 +149,7 @@ fun TimetableGridCell(slot: TimetableSlot, span: Int = 1) {
                                     fontSize = if (span >= 2) 10.5.sp else 9.sp,
                                     fontWeight = FontWeight.Black
                                 ),
-                                color = if (slot.newRoom != null || slot.subRoom != null) accentColor else MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = if (slot.status == LessonStatus.SUBSTITUTION) colors.accent else MaterialTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )

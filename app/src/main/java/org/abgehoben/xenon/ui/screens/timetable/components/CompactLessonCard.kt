@@ -2,16 +2,7 @@ package org.abgehoben.xenon.ui.screens.timetable.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -21,18 +12,18 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.abgehoben.xenon.R
+import org.abgehoben.xenon.data.model.timetable.LessonStatus
 import org.abgehoben.xenon.data.model.timetable.MergedSlot
 import org.abgehoben.xenon.data.remote.dto.timetable.ClassHour
 import org.abgehoben.xenon.ui.screens.timetable.util.TimetableLayoutUtils
+import org.abgehoben.xenon.ui.screens.timetable.util.colors
 import org.abgehoben.xenon.ui.theme.Dimens
-import org.abgehoben.xenon.ui.theme.StatusSubstitution
 
 @Composable
 fun CompactLessonCard(
@@ -43,24 +34,7 @@ fun CompactLessonCard(
     onClick: () -> Unit
 ) {
     val slot = mergedSlot.slot
-    val isSubstitution = slot != null && (slot.substitution != null || slot.newRoom != null || slot.subRoom != null)
-
-    val accentColor = when {
-        slot == null -> Color.Transparent
-        slot.isHoliday -> MaterialTheme.colorScheme.tertiary
-        isSubstitution -> StatusSubstitution
-        slot.cancelled -> MaterialTheme.colorScheme.error
-        else -> MaterialTheme.colorScheme.primary
-    }
-
-    val colorPair = when {
-        slot == null -> MaterialTheme.colorScheme.surfaceContainerLowest to MaterialTheme.colorScheme.onSurfaceVariant
-        slot.isHoliday -> MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.4f) to MaterialTheme.colorScheme.onTertiaryContainer
-        isSubstitution -> MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f) to MaterialTheme.colorScheme.onSecondaryContainer
-        slot.cancelled -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f) to MaterialTheme.colorScheme.onErrorContainer
-        else -> MaterialTheme.colorScheme.surfaceContainerHigh to MaterialTheme.colorScheme.onSurface
-    }
-
+    val colors = mergedSlot.status.colors()
     val (startTime, _) = TimetableLayoutUtils.getTimeRangeForHour(mergedSlot.startHour, classHours)
     val cardHeight = if (mergedSlot.span >= 2) Dimens.TimetableMergedHourHeight else Dimens.TimetableMinHourHeight
 
@@ -74,7 +48,7 @@ fun CompactLessonCard(
                 .fillMaxSize()
                 .clickable(enabled = slot != null, onClick = onClick),
             shape = RoundedCornerShape(Dimens.RadiusStandard),
-            color = colorPair.first,
+            color = colors.container,
             tonalElevation = 1.dp
         ) {
             Row(
@@ -87,7 +61,7 @@ fun CompactLessonCard(
                         .width(4.dp)
                         .fillMaxHeight(0.7f)
                         .clip(CircleShape)
-                        .background(accentColor)
+                        .background(colors.accent)
                 )
 
                 Column(
@@ -116,7 +90,7 @@ fun CompactLessonCard(
                         .padding(start = Dimens.SpacingSmall)
                 ) {
                     if (slot != null) {
-                        if (slot.cancelled) {
+                        if (slot.status == LessonStatus.CANCELLED) {
                             Text(
                                 text = stringResource(R.string.cancelled_prefix, slot.course),
                                 style = MaterialTheme.typography.labelSmall,
@@ -124,8 +98,7 @@ fun CompactLessonCard(
                                 fontWeight = FontWeight.Bold
                             )
                         }
-                        val mainText =
-                            slot.substitution ?: if (!slot.cancelled) slot.course else null
+                        val mainText = slot.substitution ?: if (slot.status != LessonStatus.CANCELLED) slot.course else null
                         if (mainText != null) {
                             Text(
                                 text = mainText,
@@ -137,18 +110,18 @@ fun CompactLessonCard(
                             )
                         }
 
-                        if (slot.substitution == null || !slot.cancelled) {
+                        if (slot.substitution == null || slot.status != LessonStatus.CANCELLED) {
                             Text(
                                 text = slot.teacher,
                                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                                color = colorPair.second.copy(alpha = 0.75f)
+                                color = colors.onContainer.copy(alpha = 0.75f)
                             )
                         }
                     } else {
                         Text(
                             text = stringResource(R.string.free_period),
                             style = MaterialTheme.typography.labelMedium,
-                            color = colorPair.second.copy(alpha = 0.5f)
+                            color = colors.onContainer.copy(alpha = 0.5f)
                         )
                     }
                 }
@@ -163,7 +136,7 @@ fun CompactLessonCard(
                                 fontSize = 11.sp
                             ),
                             modifier = Modifier.padding(end = Dimens.SpacingNormal),
-                            color = if (slot.newRoom != null || slot.subRoom != null) accentColor else MaterialTheme.colorScheme.onSurfaceVariant
+                            color = if (slot.status == LessonStatus.SUBSTITUTION) colors.accent else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }

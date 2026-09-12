@@ -1,6 +1,7 @@
 package org.abgehoben.xenon.data.repository.builder
 
 import kotlinx.serialization.json.*
+import org.abgehoben.xenon.data.model.timetable.LessonStatus
 import org.abgehoben.xenon.data.model.timetable.SubstitutionSummary
 import org.abgehoben.xenon.data.model.timetable.TimetableSlot
 import org.abgehoben.xenon.data.remote.dto.timetable.ClassHour
@@ -36,7 +37,7 @@ object LessonsProcessor {
             if (dayIdx !in 1..5) continue
 
             val hour = extractHourNumber(item, classHourMap) ?: continue
-            if (grid[dayIdx]!![hour]?.isHoliday == true) continue
+            if (grid[dayIdx]!![hour]?.status == LessonStatus.HOLIDAY) continue
 
             when (type) {
                 "regularLesson" -> processRegularLesson(item, grid[dayIdx]!!, hour)
@@ -56,7 +57,7 @@ object LessonsProcessor {
             if (dayIdx !in 1..5) continue
 
             val hour = extractHourNumber(item, classHourMap) ?: continue
-            if (grid[dayIdx]!![hour]?.isHoliday == true) continue
+            if (grid[dayIdx]!![hour]?.status == LessonStatus.HOLIDAY) continue
 
             processEventLesson(item, grid[dayIdx]!!, hour, date, dayIdx, subsSummary)
         }
@@ -90,6 +91,7 @@ object LessonsProcessor {
             course = subject,
             teacher = teachers,
             room = room,
+            status = LessonStatus.REGULAR,
             courseId = lesson["courseId"]?.jsonPrimitive?.intOrNull,
             lessonId = lesson["lessonId"]?.jsonPrimitive?.intOrNull
         )
@@ -126,7 +128,7 @@ object LessonsProcessor {
             course = subject,
             teacher = teachers,
             room = originalRoom.ifEmpty { newRoom },
-            cancelled = false,
+            status = LessonStatus.SUBSTITUTION,
             substitution = comment,
             newRoom = if (hasRoomChange) newRoom else null,
             subRoom = if (hasRoomChange) newRoom else null,
@@ -166,7 +168,7 @@ object LessonsProcessor {
             course = subject,
             teacher = teachers,
             room = room,
-            cancelled = true,
+            status = LessonStatus.CANCELLED,
             courseId = orig?.get("courseId")?.jsonPrimitive?.intOrNull,
             lessonId = orig?.get("lessonId")?.jsonPrimitive?.intOrNull
         )
@@ -206,7 +208,7 @@ object LessonsProcessor {
             val hasRoomChange = rooms.isNotEmpty() && rooms != existing.room
 
             dayGrid[hour] = existing.copy(
-                cancelled = true,
+                status = LessonStatus.SUBSTITUTION,
                 substitution = repText,
                 subRoom = if (hasRoomChange) rooms else (existing.subRoom ?: existing.newRoom),
                 teacher = teachers.ifEmpty { existing.teacher }
@@ -217,7 +219,7 @@ object LessonsProcessor {
                 course = displayTitle,
                 teacher = teachers,
                 room = rooms,
-                cancelled = false,
+                status = LessonStatus.SUBSTITUTION,
                 substitution = displayTitle,
                 newRoom = null,
                 subRoom = rooms.ifEmpty { null }

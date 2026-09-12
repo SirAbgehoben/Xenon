@@ -2,39 +2,27 @@ package org.abgehoben.xenon.ui.screens.timetable.sheets
 
 import android.util.Log
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.abgehoben.xenon.R
+import org.abgehoben.xenon.data.model.timetable.LessonStatus
 import org.abgehoben.xenon.data.model.timetable.MergedSlot
 import org.abgehoben.xenon.data.model.timetable.TimetableSlot
 import org.abgehoben.xenon.data.remote.dto.timetable.ClassHour
-import org.abgehoben.xenon.ui.screens.timetable.util.TimetableLayoutUtils
+import org.abgehoben.xenon.ui.screens.timetable.util.TimetableLayoutUtils.getTimeRangeForHour
+import org.abgehoben.xenon.ui.screens.timetable.util.colors
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -49,8 +37,8 @@ fun LessonDetailsBottomSheet(
     mondayDate: LocalDate,
     onDismiss: () -> Unit
 ) {
-    val (startTime, _) = TimetableLayoutUtils.getTimeRangeForHour(mergedSlot.startHour, classHours)
-    val (_, endTime) = TimetableLayoutUtils.getTimeRangeForHour(mergedSlot.endHour, classHours)
+    val (startTime, _) = getTimeRangeForHour(mergedSlot.startHour, classHours)
+    val (_, endTime) = getTimeRangeForHour(mergedSlot.endHour, classHours)
     val combinedTime = if (startTime.isNotEmpty() && endTime.isNotEmpty()) "$startTime - $endTime" else ""
     val slotDate = mondayDate.plusDays(dayIndex.toLong() - 1)
 
@@ -59,13 +47,7 @@ fun LessonDetailsBottomSheet(
         DateTimeFormatter.ofPattern("E | dd.MM.yy", currentLocale)
     }
 
-    val isSubstitution = slot.substitution != null || slot.newRoom != null || slot.subRoom != null
-    val accentColor = when {
-        slot.isHoliday -> MaterialTheme.colorScheme.tertiary
-        slot.cancelled && !isSubstitution -> MaterialTheme.colorScheme.error
-        isSubstitution -> Color(0xFF4CAF50)
-        else -> MaterialTheme.colorScheme.primary
-    }
+    val colors = slot.status.colors()
 
     Column(
         modifier = Modifier
@@ -110,21 +92,19 @@ fun LessonDetailsBottomSheet(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(4.dp)
-                .background(accentColor)
+                .background(colors.accent)
         )
 
         Spacer(modifier = Modifier.height(16.dp))
 
         Column(modifier = Modifier.padding(horizontal = 24.dp)) {
-            val titleText = when {
-                slot.cancelled && slot.substitution != null -> stringResource(
-                    R.string.cancelled_substitution_title,
-                    slot.course,
-                    slot.substitution
-                )
-
-                slot.cancelled -> stringResource(R.string.cancelled_prefix, slot.course)
-                slot.substitution != null -> slot.substitution
+            val titleText = when (slot.status) {
+                LessonStatus.CANCELLED -> if (slot.substitution != null) {
+                    stringResource(R.string.cancelled_substitution_title, slot.course, slot.substitution)
+                } else {
+                    stringResource(R.string.cancelled_prefix, slot.course)
+                }
+                LessonStatus.SUBSTITUTION -> slot.substitution ?: slot.course
                 else -> slot.course
             }
 
@@ -134,7 +114,7 @@ fun LessonDetailsBottomSheet(
                 fontWeight = FontWeight.Bold
             )
 
-            if (slot.substitution != null && !slot.cancelled && slot.substitution != slot.course) {
+            if (slot.status == LessonStatus.SUBSTITUTION && slot.substitution != slot.course) {
                 Text(
                     text = stringResource(R.string.regular_course_label, slot.course),
                     style = MaterialTheme.typography.bodyMedium,
@@ -162,10 +142,9 @@ fun LessonDetailsBottomSheet(
             }
 
             val effectiveNewRoom = slot.subRoom ?: slot.newRoom
-            val hasRealRoomChange =
-                effectiveNewRoom != null && slot.room.isNotEmpty() && effectiveNewRoom != slot.room
+            val hasRealRoomChange = effectiveNewRoom != null && slot.room.isNotEmpty() && effectiveNewRoom != slot.room
 
-            if (slot.cancelled || isSubstitution) {
+            if (slot.status == LessonStatus.CANCELLED || slot.status == LessonStatus.SUBSTITUTION) {
                 Spacer(modifier = Modifier.height(24.dp))
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                 Spacer(modifier = Modifier.height(16.dp))
@@ -175,33 +154,26 @@ fun LessonDetailsBottomSheet(
                         Icons.Default.Info,
                         contentDescription = null,
                         modifier = Modifier.size(24.dp),
-                        tint = accentColor
+                        tint = colors.accent
                     )
                     Spacer(modifier = Modifier.width(16.dp))
                     Column {
                         Text(
-                            text = stringResource(if (isSubstitution) R.string.substitution_title else R.string.lesson_cancelled),
+                            text = stringResource(if (slot.status == LessonStatus.SUBSTITUTION) R.string.substitution_title else R.string.lesson_cancelled),
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.Bold,
-                            color = accentColor
+                            color = colors.accent
                         )
                         if (slot.substitution != null) {
                             Text(
-                                text = stringResource(
-                                    R.string.replacement_prefix,
-                                    slot.substitution
-                                ),
+                                text = stringResource(R.string.replacement_prefix, slot.substitution),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.SemiBold
                             )
                         }
                         if (hasRealRoomChange) {
                             Text(
-                                text = stringResource(
-                                    R.string.room_change_format,
-                                    slot.room,
-                                    effectiveNewRoom
-                                ),
+                                text = stringResource(R.string.room_change_format, slot.room, effectiveNewRoom),
                                 style = MaterialTheme.typography.bodyMedium
                             )
                         }

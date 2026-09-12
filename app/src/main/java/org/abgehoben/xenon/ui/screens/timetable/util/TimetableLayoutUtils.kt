@@ -2,6 +2,7 @@ package org.abgehoben.xenon.ui.screens.timetable.util
 
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import org.abgehoben.xenon.data.model.timetable.LessonStatus
 import org.abgehoben.xenon.data.model.timetable.MergedSlot
 import org.abgehoben.xenon.data.model.timetable.TimetableSlot
 import org.abgehoben.xenon.data.remote.dto.timetable.ClassHour
@@ -49,9 +50,8 @@ object TimetableLayoutUtils {
     }
 
     fun isSameLesson(a: TimetableSlot, b: TimetableSlot): Boolean {
-        if (a.isHoliday && b.isHoliday) return a.course == b.course
-        if (a.isHoliday != b.isHoliday) return false
-        if (a.cancelled != b.cancelled) return false
+        if (a.status != b.status) return false
+        if (a.status == LessonStatus.HOLIDAY) return a.course == b.course
         if (a.substitution != b.substitution) return false
         if (a.course != b.course) return false
         if (a.teacher != b.teacher) return false
