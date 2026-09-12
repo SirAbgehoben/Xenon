@@ -1,4 +1,3 @@
-// main/java/org/abgehoben/xenon/data/local/SessionManager.kt
 package org.abgehoben.xenon.data.local
 
 import android.content.Context
