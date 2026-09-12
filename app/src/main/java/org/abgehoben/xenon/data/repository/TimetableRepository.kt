@@ -19,8 +19,9 @@ import java.time.LocalDate
 
 class TimetableRepository(
     private val api: SchulmanagerApi,
-    sessionManager: SessionManager? = null,
-    private val calendarRepository: CalendarRepository = CalendarRepository(api)
+    private val sessionManager: SessionManager,
+    private val calendarRepository: CalendarRepository,
+    private val studentResolver: StudentResolver
 ) {
     companion object {
         private const val TAG = "TimetableRepo"
@@ -28,11 +29,14 @@ class TimetableRepository(
 
     private val json = Json { ignoreUnknownKeys = true }
     private val memoryCache = TimetableCache()
-    private val studentResolver = StudentResolver(api, sessionManager)
+
+    var lastScheduleLoadDurationMs: Long? = null
+        private set
 
     fun clearAllCache() {
         memoryCache.clear()
         calendarRepository.clearCache()
+        lastScheduleLoadDurationMs = null
     }
 
     fun getCacheStats(): CacheStats {
@@ -52,6 +56,7 @@ class TimetableRepository(
             return memoryCache.getGrid(monday)!!
         }
 
+        val startTime = System.currentTimeMillis()
         val mondayStr = monday.format(DateTimeParser.ISO_DATE_FORMATTER)
         val sundayStr = monday.plusDays(6).format(DateTimeParser.ISO_DATE_FORMATTER)
 
@@ -69,9 +74,7 @@ class TimetableRepository(
                 moduleName = "schedules",
                 endpointName = "get-actual-lessons",
                 parameters = buildJsonObject {
-                    if (studentJson != null) {
-                        put("student", studentJson)
-                    }
+                    if (studentJson != null) put("student", studentJson)
                     put("start", mondayStr)
                     put("end", sundayStr)
                 }
@@ -124,6 +127,7 @@ class TimetableRepository(
             }
 
             memoryCache.putGrid(monday, grid)
+            lastScheduleLoadDurationMs = System.currentTimeMillis() - startTime
             return grid
         } catch (e: Throwable) {
             if (memoryCache.containsGrid(monday)) {

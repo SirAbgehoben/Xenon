@@ -17,7 +17,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import kotlinx.coroutines.launch
-import org.abgehoben.xenon.MainViewModel
 import org.abgehoben.xenon.data.model.timetable.TimetableViewMode
 import org.abgehoben.xenon.data.model.timetable.MergedSlot
 import org.abgehoben.xenon.data.model.timetable.TimetableSlot
@@ -28,7 +27,7 @@ import java.time.LocalDate
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun TimetableScreen(viewModel: MainViewModel) {
+fun TimetableScreen(viewModel: TimetableViewModel) {
     val timetableGrid by viewModel.timetableGrid.collectAsState()
     val syncError by viewModel.syncError.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()

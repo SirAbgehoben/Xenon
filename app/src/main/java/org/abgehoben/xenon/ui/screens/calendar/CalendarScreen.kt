@@ -13,7 +13,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import kotlinx.coroutines.launch
-import org.abgehoben.xenon.MainViewModel
 import org.abgehoben.xenon.R
 import org.abgehoben.xenon.data.model.calendar.ProcessedEvent
 import org.abgehoben.xenon.ui.components.SyncErrorState
@@ -23,7 +22,7 @@ import java.time.YearMonth
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun CalendarScreen(viewModel: MainViewModel) {
+fun CalendarScreen(viewModel: CalendarViewModel) {
     val eventsByDay by viewModel.calendarEvents.collectAsState()
     val syncError by viewModel.syncError.collectAsState()
     val isSyncing by viewModel.isSyncing.collectAsState()

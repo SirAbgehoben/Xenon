@@ -3,14 +3,9 @@ package org.abgehoben.xenon.data.remote
 import android.util.Log
 import io.ktor.client.*
 import io.ktor.client.call.*
-import io.ktor.client.engine.okhttp.*
-import io.ktor.client.plugins.*
-import io.ktor.client.plugins.contentnegotiation.*
-import io.ktor.client.plugins.logging.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
-import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -25,60 +20,17 @@ import java.io.IOException
 import java.net.ConnectException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
-import java.util.concurrent.TimeUnit
 
-class SchulmanagerApi(private val sessionManager: SessionManager) {
+class SchulmanagerApi(
+    private val sessionManager: SessionManager,
+    private val client: HttpClient,
+    private val json: Json
+) {
     companion object {
         private const val TAG = "SchulmanagerApi"
     }
 
     private val baseUrl = "https://login.schulmanager-online.de"
-    private val json = Json {
-        ignoreUnknownKeys = true
-        coerceInputValues = true
-        encodeDefaults = true
-        prettyPrint = false
-    }
-
-    private val client = HttpClient(OkHttp) {
-        engine {
-            config {
-                val dispatcher = okhttp3.Dispatcher()
-                dispatcher.maxRequests = 64
-                dispatcher.maxRequestsPerHost = 16
-                dispatcher(dispatcher)
-
-                connectTimeout(10, TimeUnit.SECONDS)
-                readTimeout(15, TimeUnit.SECONDS)
-                writeTimeout(15, TimeUnit.SECONDS)
-                callTimeout(15, TimeUnit.SECONDS)
-                retryOnConnectionFailure(true)
-            }
-        }
-        install(ContentNegotiation) {
-            json(json)
-        }
-        install(HttpTimeout) {
-            requestTimeoutMillis = 20000
-            connectTimeoutMillis = 10000
-            socketTimeoutMillis = 20000
-        }
-        install(Logging) {
-            logger = object : Logger {
-                override fun log(message: String) {
-                    Log.d(TAG, message)
-                }
-            }
-            level = LogLevel.INFO
-        }
-        defaultRequest {
-            header(HttpHeaders.ContentType, ContentType.Application.Json)
-            header(HttpHeaders.Accept, "application/json, text/plain, */*")
-            header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-            header("Origin", baseUrl)
-            header("Referer", "$baseUrl/")
-        }
-    }
 
     suspend fun login(
         username: String,

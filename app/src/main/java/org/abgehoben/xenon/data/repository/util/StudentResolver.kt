@@ -8,7 +8,7 @@ import org.abgehoben.xenon.data.remote.SchulmanagerApi
 
 class StudentResolver(
     private val api: SchulmanagerApi,
-    private val sessionManager: SessionManager?
+    private val sessionManager: SessionManager
 ) {
     companion object {
         private const val TAG = "StudentResolver"
@@ -20,7 +20,7 @@ class StudentResolver(
     suspend fun resolveActiveStudent(token: String): JsonObject? {
         // 1. Check the local session cache
         val cachedJson = runCatching {
-            sessionManager?.studentData?.firstOrNull()?.let { json.parseToJsonElement(it).jsonObject }
+            sessionManager.studentData.firstOrNull()?.let { json.parseToJsonElement(it).jsonObject }
         }.getOrNull()
 
         if (cachedJson != null && cachedJson["classId"] != null) {
@@ -35,7 +35,7 @@ class StudentResolver(
 
             val resolved = candidates.firstOrNull()
             if (resolved != null) {
-                sessionManager?.saveStudentData(resolved.toString())
+                sessionManager.saveStudentData(resolved.toString())
                 Log.d(TAG, "Resolved active student dynamically: $resolved")
                 return resolved
             }

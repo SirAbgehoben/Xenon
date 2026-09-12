@@ -5,15 +5,18 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import org.abgehoben.xenon.MainViewModel
 import org.abgehoben.xenon.ui.screens.calendar.CalendarScreen
+import org.abgehoben.xenon.ui.screens.calendar.CalendarViewModel
 import org.abgehoben.xenon.ui.screens.settings.SettingsScreen
+import org.abgehoben.xenon.ui.screens.settings.SettingsViewModel
 import org.abgehoben.xenon.ui.screens.timetable.TimetableScreen
+import org.abgehoben.xenon.ui.screens.timetable.TimetableViewModel
+import org.koin.androidx.compose.koinViewModel
 
 @Composable
 fun XenonNavHost(
     navController: NavHostController,
-    viewModel: MainViewModel,
+    onLogout: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     NavHost(
@@ -22,13 +25,19 @@ fun XenonNavHost(
         modifier = modifier
     ) {
         composable(NavigationItem.Timetable.route) {
-            TimetableScreen(viewModel)
+            val timetableViewModel: TimetableViewModel = koinViewModel()
+            TimetableScreen(viewModel = timetableViewModel)
         }
         composable(NavigationItem.Calendar.route) {
-            CalendarScreen(viewModel)
+            val calendarViewModel: CalendarViewModel = koinViewModel()
+            CalendarScreen(viewModel = calendarViewModel)
         }
         composable(NavigationItem.Settings.route) {
-            SettingsScreen(viewModel)
+            val settingsViewModel: SettingsViewModel = koinViewModel()
+            SettingsScreen(
+                viewModel = settingsViewModel,
+                onLogout = onLogout
+            )
         }
     }
 }

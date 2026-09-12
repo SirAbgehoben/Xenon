@@ -18,7 +18,6 @@ import androidx.compose.ui.platform.toClipEntry
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import kotlinx.coroutines.launch
-import org.abgehoben.xenon.MainViewModel
 import org.abgehoben.xenon.R
 import org.abgehoben.xenon.data.local.model.ThemeMode
 import org.abgehoben.xenon.data.model.timetable.TimetableViewMode
@@ -26,15 +25,17 @@ import org.abgehoben.xenon.ui.screens.settings.components.SettingsClickableItem
 import org.abgehoben.xenon.ui.screens.settings.components.SettingsGroupCard
 import org.abgehoben.xenon.ui.screens.settings.components.SettingsSwitchItem
 import org.abgehoben.xenon.ui.screens.settings.dialogs.*
-import org.abgehoben.xenon.ui.state.AppState
 import org.abgehoben.xenon.ui.theme.Dimens
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(viewModel: MainViewModel) {
+fun SettingsScreen(
+    viewModel: SettingsViewModel,
+    onLogout: () -> Unit = {}
+) {
     val userSettings by viewModel.userSettings.collectAsState()
-    val appState by viewModel.appState.collectAsState()
-    val lastScheduleLoadDurationMs by viewModel.lastScheduleLoadDurationMs.collectAsState()
+    val activeToken by viewModel.jwtToken.collectAsState()
+    val lastScheduleLoadDurationMs = viewModel.lastScheduleLoadDurationMs
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val clipboard = LocalClipboard.current
@@ -52,8 +53,6 @@ fun SettingsScreen(viewModel: MainViewModel) {
 
     var icalUrl by remember { mutableStateOf<String?>(null) }
     var isLoadingIcal by remember { mutableStateOf(false) }
-
-    val activeToken = (appState as? AppState.Authenticated)?.token
 
     Scaffold(
         contentWindowInsets = WindowInsets(
