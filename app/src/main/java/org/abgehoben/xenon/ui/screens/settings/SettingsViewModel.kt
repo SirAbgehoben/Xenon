@@ -13,6 +13,7 @@ import org.abgehoben.xenon.data.local.SessionManager
 import org.abgehoben.xenon.data.local.SettingsManager
 import org.abgehoben.xenon.data.local.model.ThemeMode
 import org.abgehoben.xenon.data.local.model.UserSettings
+import org.abgehoben.xenon.data.model.auth.UserRole
 import org.abgehoben.xenon.data.model.system.CacheStats
 import org.abgehoben.xenon.data.model.timetable.TimetableViewMode
 import org.abgehoben.xenon.data.remote.SchulmanagerApi
@@ -34,6 +35,9 @@ class SettingsViewModel(
 
     val jwtToken: StateFlow<String?> = sessionManager.jwtToken
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    val userRole: StateFlow<UserRole> = sessionManager.userRole
+        .stateIn(viewModelScope, SharingStarted.Eagerly, UserRole.STUDENT)
 
     val lastScheduleLoadDurationMs: Long?
         get() = timetableRepository.lastScheduleLoadDurationMs

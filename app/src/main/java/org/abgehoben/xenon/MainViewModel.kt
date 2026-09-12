@@ -12,19 +12,19 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonObject
 import org.abgehoben.xenon.data.local.SessionManager
 import org.abgehoben.xenon.data.local.SettingsManager
 import org.abgehoben.xenon.data.local.model.UserSettings
 import org.abgehoben.xenon.data.remote.SchulmanagerApi
+import org.abgehoben.xenon.data.repository.util.StudentResolver
 import org.abgehoben.xenon.ui.state.AppState
 import org.abgehoben.xenon.util.ErrorFormatter
 
 class MainViewModel(
     private val sessionManager: SessionManager,
-    settingsManager: SettingsManager,
+    private val studentResolver: StudentResolver,
     private val api: SchulmanagerApi,
+    settingsManager: SettingsManager,
     application: Application
 ) : AndroidViewModel(application) {
     companion object {
@@ -38,7 +38,7 @@ class MainViewModel(
     val appState: StateFlow<AppState> = _appState
 
     private val coroutineExceptionHandler = CoroutineExceptionHandler { _, throwable ->
-        Log.e(TAG, "Uncaught session error: ${throwable.message}", throwable)
+        Log.e(TAG, "Session error: ${throwable.message}", throwable)
         _appState.value = AppState.Error(ErrorFormatter.format(getApplication(), throwable))
     }
 
@@ -51,35 +51,11 @@ class MainViewModel(
             sessionManager.jwtToken.collectLatest { token ->
                 if (token != null) {
                     _appState.value = AppState.Authenticated(token)
-                    ensureStudentData(token)
+                    studentResolver.resolveAndSync(token)
                 } else {
                     _appState.value = AppState.LoginRequired
                 }
             }
-        }
-    }
-
-    private suspend fun ensureStudentData(token: String) {
-        try {
-            val statusObj = api.getLoginStatus(token)
-            val userObj = statusObj?.get("user") as? JsonObject
-
-            val directStudent = userObj?.get("associatedStudent") as? JsonObject
-            val parentStudent =
-                (userObj?.get("associatedParents") as? JsonArray)?.firstNotNullOfOrNull {
-                    (it as? JsonObject)?.get("student") as? JsonObject
-                }
-            val pluralStudent = (userObj?.get("associatedStudents") as? JsonArray)
-                ?.firstOrNull() as? JsonObject
-
-            val resolved = directStudent ?: parentStudent ?: pluralStudent ?: userObj
-
-            if (resolved != null) {
-                sessionManager.saveStudentData(resolved.toString())
-                Log.d(TAG, "Saved resolved student data: $resolved")
-            }
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to resolve student info from login-status", e)
         }
     }
 
@@ -90,7 +66,7 @@ class MainViewModel(
                 val response = api.login(username, password)
                 if (response.jwt != null) {
                     sessionManager.saveJwtToken(response.jwt)
-                    ensureStudentData(response.jwt)
+                    studentResolver.resolveAndSync(response.jwt)
                 } else {
                     _appState.value = AppState.Error(
                         getApplication<Application>().getString(R.string.error_login_failed)

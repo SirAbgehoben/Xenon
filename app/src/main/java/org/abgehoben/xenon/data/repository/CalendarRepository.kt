@@ -15,13 +15,13 @@ import org.abgehoben.xenon.data.repository.util.DateTimeParser
 import java.time.LocalDate
 
 class CalendarRepository(
-    private val api: SchulmanagerApi
+    private val api: SchulmanagerApi,
+    private val json: Json
 ) {
     companion object {
         private const val TAG = "CalendarRepo"
     }
 
-    private val json = Json { ignoreUnknownKeys = true }
     private val memoryCache = CalendarCache()
 
     fun clearCache() = memoryCache.clear()

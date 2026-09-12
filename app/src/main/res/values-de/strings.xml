@@ -100,10 +100,12 @@
     <string name="ical_loading">iCal-Abonnementlink wird generiert…</string>
     <string name="ical_rotate_token">Token erneuern</string>
     <string name="ical_token_rotated">Kalender-Abonnement-Token erneuert</string>
-    <string name="user_role_student">Schüler</string>
     <string name="account_logged_in_as">Angemeldet</string>
     <string name="ical_tab_timetable">Stundenplan</string>
     <string name="ical_tab_calendar">Schulkalender</string>
     <string name="ical_timetable_desc">Abonniere deinen persönlichen Stundenplan in externen Kalender-Apps (Google Kalender, Apple Kalender):</string>
     <string name="ical_calendar_desc">Abonniere Schultermine, Veranstaltungen und Ferien in externen Kalender-Apps:</string>
+    <string name="user_role_student">Schüler</string>
+    <string name="user_role_parent">Elternteil</string>
+    <string name="user_role_teacher">Lehrkraft</string>
 </resources>

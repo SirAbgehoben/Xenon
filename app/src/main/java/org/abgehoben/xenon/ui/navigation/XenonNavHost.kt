@@ -12,7 +12,6 @@ import org.abgehoben.xenon.ui.screens.timetable.TimetableRoute
 @Composable
 fun XenonNavHost(
     navController: NavHostController,
-    onLogout: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     NavHost(
@@ -27,7 +26,7 @@ fun XenonNavHost(
             CalendarRoute()
         }
         composable(NavigationItem.Settings.route) {
-            SettingsRoute(onLogout = onLogout)
+            SettingsRoute()
         }
     }
 }

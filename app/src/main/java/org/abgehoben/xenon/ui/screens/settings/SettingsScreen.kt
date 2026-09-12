@@ -21,25 +21,28 @@ import kotlinx.coroutines.launch
 import org.abgehoben.xenon.R
 import org.abgehoben.xenon.data.local.model.ThemeMode
 import org.abgehoben.xenon.data.local.model.UserSettings
+import org.abgehoben.xenon.data.model.auth.UserRole
 import org.abgehoben.xenon.data.model.system.CacheStats
 import org.abgehoben.xenon.data.model.timetable.TimetableViewMode
 import org.abgehoben.xenon.ui.screens.settings.components.SettingsClickableItem
 import org.abgehoben.xenon.ui.screens.settings.components.SettingsGroupCard
 import org.abgehoben.xenon.ui.screens.settings.components.SettingsSwitchItem
 import org.abgehoben.xenon.ui.screens.settings.dialogs.*
+import org.abgehoben.xenon.ui.screens.settings.util.labelRes
 import org.abgehoben.xenon.ui.theme.Dimens
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
 fun SettingsRoute(
-    onLogout: () -> Unit,
     viewModel: SettingsViewModel = koinViewModel()
 ) {
     val userSettings by viewModel.userSettings.collectAsState()
     val activeToken by viewModel.jwtToken.collectAsState()
+    val userRole by viewModel.userRole.collectAsState()
 
     SettingsScreen(
         userSettings = userSettings,
+        userRole = userRole,
         activeToken = activeToken,
         lastScheduleLoadDurationMs = viewModel.lastScheduleLoadDurationMs,
         onSetThemeMode = viewModel::setThemeMode,
@@ -54,10 +57,7 @@ fun SettingsRoute(
         onGetCacheStats = viewModel::getTimetableCacheStats,
         onPingServer = viewModel::pingServer,
         onDecodeJwt = viewModel::decodeJwtPayload,
-        onLogout = {
-            viewModel.logout()
-            onLogout()
-        }
+        onLogout = viewModel::logout
     )
 }
 
@@ -65,6 +65,7 @@ fun SettingsRoute(
 @Composable
 fun SettingsScreen(
     userSettings: UserSettings,
+    userRole: UserRole,
     activeToken: String?,
     lastScheduleLoadDurationMs: Long?,
     onSetThemeMode: (ThemeMode) -> Unit,
@@ -129,7 +130,7 @@ fun SettingsScreen(
                 SettingsGroupCard(title = stringResource(R.string.section_account)) {
                     SettingsClickableItem(
                         title = stringResource(R.string.account_logged_in_as),
-                        subtitle = stringResource(R.string.user_role_student),
+                        subtitle = stringResource(userRole.labelRes),
                         icon = Icons.Default.AccountCircle,
                         onClick = {}
                     )
@@ -348,7 +349,7 @@ fun SettingsScreen(
         DebugDialog(
             jwtToken = activeToken,
             decodedJwtJson = remember(activeToken) { onDecodeJwt(activeToken) },
-            bundleVersion = "PLACEHOLDER", //TODO
+            bundleVersion = "PLACEHOLDER",
             cacheStats = remember { onGetCacheStats() },
             lastScheduleLoadDurationMs = lastScheduleLoadDurationMs,
             onPingServer = onPingServer,

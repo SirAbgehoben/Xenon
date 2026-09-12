@@ -21,13 +21,13 @@ class TimetableRepository(
     private val api: SchulmanagerApi,
     private val sessionManager: SessionManager,
     private val calendarRepository: CalendarRepository,
-    private val studentResolver: StudentResolver
+    private val studentResolver: StudentResolver,
+    private val json: Json
 ) {
     companion object {
         private const val TAG = "TimetableRepo"
     }
 
-    private val json = Json { ignoreUnknownKeys = true }
     private val memoryCache = TimetableCache()
 
     var lastScheduleLoadDurationMs: Long? = null

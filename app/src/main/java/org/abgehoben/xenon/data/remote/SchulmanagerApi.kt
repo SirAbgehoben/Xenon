@@ -23,8 +23,7 @@ import java.net.UnknownHostException
 
 class SchulmanagerApi(
     private val sessionManager: SessionManager,
-    private val client: HttpClient,
-    private val json: Json
+    private val client: HttpClient
 ) {
     companion object {
         private const val TAG = "SchulmanagerApi"

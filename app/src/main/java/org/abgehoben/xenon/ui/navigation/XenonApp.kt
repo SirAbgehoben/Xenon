@@ -72,7 +72,6 @@ private fun AuthenticatedMainContent(viewModel: MainViewModel) {
     ) { innerPadding ->
         XenonNavHost(
             navController = navController,
-            onLogout = viewModel::logout,
             modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding())
         )
     }
