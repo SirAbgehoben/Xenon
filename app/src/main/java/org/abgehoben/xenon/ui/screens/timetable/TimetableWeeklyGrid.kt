@@ -76,9 +76,11 @@ fun TimetableWeeklyGrid(
         ) {
             val minGap = 4.dp
             val minHourHeight = 38.dp
+            // Deduct a 1.dp buffer to absorb subpixel rounding errors
+            val availableHeight = maxHeight - 1.dp
 
-            val (baseHourHeight, isScrollable) = remember(
-                maxHeight,
+            val (baseHourHeight) = remember(
+                availableHeight,
                 hoursCount,
                 breakMinutesList,
                 scaleBreaks,
@@ -86,7 +88,7 @@ fun TimetableWeeklyGrid(
             ) {
                 if (!scaleBreaks) {
                     val totalFixedGaps = minGap * breakMinutesList.size
-                    val calculated = (maxHeight - totalFixedGaps) / hoursCount
+                    val calculated = (availableHeight - totalFixedGaps) / hoursCount
                     if (calculated >= minHourHeight) calculated to false else minHourHeight to true
                 } else {
                     var fixedGapsCount = 0
@@ -101,7 +103,7 @@ fun TimetableWeeklyGrid(
                     val totalFixedGaps = minGap * fixedGapsCount
                     val totalScaleUnits = hoursCount.toFloat() + scaledRatioSum
                     val calculated = if (totalScaleUnits > 0f) {
-                        (maxHeight - totalFixedGaps) / totalScaleUnits
+                        (availableHeight - totalFixedGaps) / totalScaleUnits
                     } else minHourHeight
 
                     if (calculated >= minHourHeight) calculated to false else minHourHeight to true
@@ -120,12 +122,10 @@ fun TimetableWeeklyGrid(
                 )
             }
 
-            val scrollModifier = if (isScrollable) Modifier.verticalScroll(vScrollState) else Modifier
-
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .then(scrollModifier)
+                    .verticalScroll(vScrollState)
             ) {
                 Row(modifier = Modifier.fillMaxWidth()) {
                     TimetablePeriodColumn(

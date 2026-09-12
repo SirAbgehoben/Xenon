@@ -61,7 +61,7 @@ fun TimetableGridCell(slot: TimetableSlot, span: Int = 1) {
         color = bgColor,
         tonalElevation = 1.dp
     ) {
-        if (slot.isHoliday) {
+        if (slot.isHoliday) { //TODO: fix text color too samey as surface container
             Box(
                 modifier = Modifier
                     .fillMaxSize()

@@ -1,6 +1,6 @@
 package org.abgehoben.xenon.data.model.timetable
 
-enum class LessonStatus {
+enum class LessonStatus { //TODO
     REGULAR,
     SUBSTITUTION,
     CANCELLED,
