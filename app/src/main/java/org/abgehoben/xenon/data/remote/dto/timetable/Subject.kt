@@ -4,5 +4,6 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class Subject(
-    val abbreviation: String? = null
+    val abbreviation: String? = null,
+    val name: String? = null
 )

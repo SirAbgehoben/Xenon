@@ -10,6 +10,7 @@ import org.abgehoben.xenon.data.model.timetable.TimetableGrid
 import org.abgehoben.xenon.data.remote.SchulmanagerApi
 import org.abgehoben.xenon.data.remote.dto.calendar.CalendarResponse
 import org.abgehoben.xenon.data.remote.dto.rpc.ApiCallRequest
+import org.abgehoben.xenon.data.remote.dto.timetable.ActualLessonItem
 import org.abgehoben.xenon.data.remote.dto.timetable.ClassHour
 import org.abgehoben.xenon.data.repository.builder.TimetableGridBuilder
 import org.abgehoben.xenon.data.repository.cache.TimetableCache
@@ -104,8 +105,24 @@ class TimetableRepository(
             val data = response.results.map { it.data ?: JsonNull }
 
             val grid = withContext(Dispatchers.Default) {
-                val actualLessonsRaw = data.getOrNull(0)?.takeIf { it !is JsonNull }
+                val actualLessons = data.getOrNull(0)?.takeIf { it !is JsonNull }?.let { raw ->
+                    val array = when (raw) {
+                        is JsonArray -> raw
+                        is JsonObject -> raw["lessons"] as? JsonArray
+                            ?: raw["data"] as? JsonArray
+                            ?: raw["results"] as? JsonArray
+                        else -> null
+                    } ?: JsonArray(emptyList())
 
+                    runCatching {
+                        json.decodeFromJsonElement<List<ActualLessonItem>>(array)
+                    }.getOrElse { error ->
+                        Log.e(TAG, "Failed to decode schedule items", error)
+                        emptyList()
+                    }
+                } ?: emptyList()
+
+                // Deserialize ClassHours if fetched
                 if (metadataRequests.isNotEmpty() && data.size >= 2) {
                     val chList = data.getOrNull(1)?.takeIf { it !is JsonNull }?.let {
                         json.decodeFromJsonElement<List<ClassHour>>(it)
@@ -121,7 +138,7 @@ class TimetableRepository(
                 TimetableGridBuilder.build(
                     monday = monday,
                     classHours = classHours,
-                    actualLessonsData = actualLessonsRaw,
+                    actualLessons = actualLessons,
                     calendar = calendar
                 )
             }

@@ -4,7 +4,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class Room(
-    val id: Int,
+    val id: Int? = null,
     val name: String? = null,
     val abbreviation: String? = null
 )

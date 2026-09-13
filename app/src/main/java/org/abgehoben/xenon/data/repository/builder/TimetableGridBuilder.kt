@@ -1,12 +1,10 @@
 package org.abgehoben.xenon.data.repository.builder
 
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonObject
 import org.abgehoben.xenon.data.model.timetable.SubstitutionSummary
 import org.abgehoben.xenon.data.model.timetable.TimetableGrid
 import org.abgehoben.xenon.data.model.timetable.TimetableSlot
 import org.abgehoben.xenon.data.remote.dto.calendar.CalendarResponse
+import org.abgehoben.xenon.data.remote.dto.timetable.ActualLessonItem
 import org.abgehoben.xenon.data.remote.dto.timetable.ClassHour
 import java.time.LocalDate
 import java.time.temporal.IsoFields
@@ -16,7 +14,7 @@ object TimetableGridBuilder {
     fun build(
         monday: LocalDate,
         classHours: List<ClassHour>,
-        actualLessonsData: JsonElement?,
+        actualLessons: List<ActualLessonItem>,
         calendar: CalendarResponse
     ): TimetableGrid {
         val classHourMap = classHours.associateBy { it.id }
@@ -35,25 +33,16 @@ object TimetableGridBuilder {
         val calWeek = monday.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)
         val weekType = if (calWeek % 2 == 0) "W2" else "W1"
 
-        // 1. Mark multi-day official school vacations (e.g. Sommerferien Mon & Tue)
+        // 1. Mark multi-day official school vacations
         HolidayProcessor.applyVacationHolidays(monday, grid, calendar)
-
-        // 2. Extract schedule elements array
-        val items = when (actualLessonsData) {
-            is JsonArray -> actualLessonsData
-            is JsonObject -> actualLessonsData["lessons"] as? JsonArray
-                ?: actualLessonsData["data"] as? JsonArray
-                ?: actualLessonsData["results"] as? JsonArray
-            else -> null
-        } ?: JsonArray(emptyList())
 
         val subsSummary = mutableListOf<SubstitutionSummary>()
 
-        // 3. Process regular lessons, room/teacher changes, cancellations, and events
+        // 2. Process typed lessons, room/teacher changes, cancellations, and events
         LessonsProcessor.processActualLessons(
             monday = monday,
             friday = friday,
-            items = items,
+            items = actualLessons,
             classHourMap = classHourMap,
             grid = grid,
             subsSummary = subsSummary

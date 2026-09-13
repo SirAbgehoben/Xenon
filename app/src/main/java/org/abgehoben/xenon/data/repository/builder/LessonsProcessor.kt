@@ -1,9 +1,9 @@
 package org.abgehoben.xenon.data.repository.builder
 
-import kotlinx.serialization.json.*
 import org.abgehoben.xenon.data.model.timetable.LessonStatus
 import org.abgehoben.xenon.data.model.timetable.SubstitutionSummary
 import org.abgehoben.xenon.data.model.timetable.TimetableSlot
+import org.abgehoben.xenon.data.remote.dto.timetable.ActualLessonItem
 import org.abgehoben.xenon.data.remote.dto.timetable.ClassHour
 import org.abgehoben.xenon.data.repository.util.DateTimeParser
 import java.time.DayOfWeek
@@ -16,20 +16,16 @@ object LessonsProcessor {
     fun processActualLessons(
         monday: LocalDate,
         friday: LocalDate,
-        items: JsonArray,
+        items: List<ActualLessonItem>,
         classHourMap: Map<Int, ClassHour>,
         grid: MutableMap<Int, MutableMap<Int, TimetableSlot?>>,
         subsSummary: MutableList<SubstitutionSummary>
     ) {
         // Pass 1: Regular, Changed, and Cancelled Lessons
-        for (elem in items) {
-            val item = elem as? JsonObject ?: continue
-            val type = item["type"]?.jsonPrimitive?.contentOrNull ?: continue
-            if (type == "event") continue
+        for (item in items) {
+            if (item.type == "event") continue
 
-            val dateStr = item["date"]?.jsonPrimitive?.contentOrNull
-                ?: item["startDate"]?.jsonPrimitive?.contentOrNull
-                ?: item["start"]?.jsonPrimitive?.contentOrNull ?: continue
+            val dateStr = item.date ?: item.startDate ?: item.start ?: continue
             val date = DateTimeParser.parseDateFlexible(dateStr) ?: continue
             if (date.isBefore(monday) || date.isAfter(friday)) continue
 
@@ -39,7 +35,7 @@ object LessonsProcessor {
             val hour = extractHourNumber(item, classHourMap) ?: continue
             if (grid[dayIdx]!![hour]?.status == LessonStatus.HOLIDAY) continue
 
-            when (type) {
+            when (item.type) {
                 "regularLesson" -> processRegularLesson(item, grid[dayIdx]!!, hour)
                 "changedLesson" -> processChangedLesson(item, grid[dayIdx]!!, hour, date, dayIdx, subsSummary)
                 "cancelledLesson" -> processCancelledLesson(item, grid[dayIdx]!!, hour, date, dayIdx, subsSummary)
@@ -47,11 +43,10 @@ object LessonsProcessor {
         }
 
         // Pass 2: Events and Displacements
-        for (elem in items) {
-            val item = elem as? JsonObject ?: continue
-            if (item["type"]?.jsonPrimitive?.contentOrNull != "event") continue
+        for (item in items) {
+            if (item.type != "event") continue
 
-            val dateStr = item["date"]?.jsonPrimitive?.contentOrNull ?: continue
+            val dateStr = item.date ?: item.startDate ?: item.start ?: continue
             val date = DateTimeParser.parseDateFlexible(dateStr) ?: continue
             val dayIdx = date.dayOfWeek.value
             if (dayIdx !in 1..5) continue
@@ -63,66 +58,55 @@ object LessonsProcessor {
         }
     }
 
-    private fun extractHourNumber(item: JsonObject, classHourMap: Map<Int, ClassHour>): Int? {
-        val chObj = item["classHour"]?.jsonObject
-        val chNum = chObj?.get("number")?.jsonPrimitive?.contentOrNull?.toIntOrNull()
-        if (chNum != null) return chNum
-
-        val chId = chObj?.get("id")?.jsonPrimitive?.intOrNull
-            ?: item["classHourId"]?.jsonPrimitive?.intOrNull
+    private fun extractHourNumber(item: ActualLessonItem, classHourMap: Map<Int, ClassHour>): Int? {
+        item.classHour?.number?.let { return it }
+        val chId = item.classHour?.id ?: item.classHourId
         return classHourMap[chId]?.number ?: chId
     }
 
     private fun processRegularLesson(
-        item: JsonObject,
+        item: ActualLessonItem,
         dayGrid: MutableMap<Int, TimetableSlot?>,
         hour: Int
     ) {
-        val lesson = item["actualLesson"]?.jsonObject ?: return
-        val subject = lesson["subjectLabel"]?.jsonPrimitive?.contentOrNull
-            ?: lesson["subject"]?.jsonObject?.get("abbreviation")?.jsonPrimitive?.contentOrNull
-            ?: "Unterricht"
-        val room = lesson["room"]?.jsonObject?.get("name")?.jsonPrimitive?.contentOrNull ?: ""
-        val teachers = lesson["teachers"]?.jsonArray?.mapNotNull {
-            it.jsonObject["abbreviation"]?.jsonPrimitive?.contentOrNull
-        }?.joinToString(", ") ?: ""
+        val lesson = item.actualLesson ?: return
+        val subject = lesson.subjectLabel ?: lesson.subject?.abbreviation ?: "Unterricht"
+        val room = lesson.room?.name.orEmpty()
+        val teachers = lesson.teachers?.mapNotNull { it.abbreviation }?.joinToString(", ").orEmpty()
 
         dayGrid[hour] = TimetableSlot(
             course = subject,
             teacher = teachers,
             room = room,
             status = LessonStatus.REGULAR,
-            courseId = lesson["courseId"]?.jsonPrimitive?.intOrNull,
-            lessonId = lesson["lessonId"]?.jsonPrimitive?.intOrNull
+            courseId = lesson.courseId,
+            lessonId = lesson.lessonId
         )
     }
 
     private fun processChangedLesson(
-        item: JsonObject,
+        item: ActualLessonItem,
         dayGrid: MutableMap<Int, TimetableSlot?>,
         hour: Int,
         date: LocalDate,
         dayIdx: Int,
         subsSummary: MutableList<SubstitutionSummary>
     ) {
-        val actual = item["actualLesson"]?.jsonObject ?: return
-        val orig = item["originalLessons"]?.jsonArray?.firstOrNull()?.jsonObject
+        val actual = item.actualLesson ?: return
+        val orig = item.originalLessons?.firstOrNull()
 
-        val subject = actual["subjectLabel"]?.jsonPrimitive?.contentOrNull
-            ?: orig?.get("subjectLabel")?.jsonPrimitive?.contentOrNull
-            ?: actual["subject"]?.jsonObject?.get("abbreviation")?.jsonPrimitive?.contentOrNull
+        val subject = actual.subjectLabel
+            ?: orig?.subjectLabel
+            ?: actual.subject?.abbreviation
+            ?: orig?.subject?.abbreviation
             ?: "Unterricht"
 
-        val originalRoom = orig?.get("room")?.jsonObject?.get("name")?.jsonPrimitive?.contentOrNull ?: ""
-        val newRoom = actual["room"]?.jsonObject?.get("name")?.jsonPrimitive?.contentOrNull ?: ""
+        val originalRoom = orig?.room?.name.orEmpty()
+        val newRoom = actual.room?.name.orEmpty()
         val hasRoomChange = newRoom.isNotEmpty() && originalRoom.isNotEmpty() && newRoom != originalRoom
 
-        val teachers = actual["teachers"]?.jsonArray?.mapNotNull {
-            it.jsonObject["abbreviation"]?.jsonPrimitive?.contentOrNull
-        }?.joinToString(", ") ?: ""
-
-        val comment = item["comment"]?.jsonPrimitive?.contentOrNull
-            ?: actual["comment"]?.jsonPrimitive?.contentOrNull
+        val teachers = actual.teachers?.mapNotNull { it.abbreviation }?.joinToString(", ").orEmpty()
+        val comment = item.comment ?: actual.comment
 
         dayGrid[hour] = TimetableSlot(
             course = subject,
@@ -132,8 +116,8 @@ object LessonsProcessor {
             substitution = comment,
             newRoom = if (hasRoomChange) newRoom else null,
             subRoom = if (hasRoomChange) newRoom else null,
-            courseId = orig?.get("courseId")?.jsonPrimitive?.intOrNull ?: actual["courseId"]?.jsonPrimitive?.intOrNull,
-            lessonId = orig?.get("lessonId")?.jsonPrimitive?.intOrNull
+            courseId = orig?.courseId ?: actual.courseId,
+            lessonId = orig?.lessonId ?: actual.lessonId
         )
 
         subsSummary.add(
@@ -148,29 +132,25 @@ object LessonsProcessor {
     }
 
     private fun processCancelledLesson(
-        item: JsonObject,
+        item: ActualLessonItem,
         dayGrid: MutableMap<Int, TimetableSlot?>,
         hour: Int,
         date: LocalDate,
         dayIdx: Int,
         subsSummary: MutableList<SubstitutionSummary>
     ) {
-        val orig = item["originalLessons"]?.jsonArray?.firstOrNull()?.jsonObject
-        val subject = orig?.get("subjectLabel")?.jsonPrimitive?.contentOrNull
-            ?: orig?.get("subject")?.jsonObject?.get("abbreviation")?.jsonPrimitive?.contentOrNull
-            ?: "Unterricht"
-        val room = orig?.get("room")?.jsonObject?.get("name")?.jsonPrimitive?.contentOrNull ?: ""
-        val teachers = orig?.get("teachers")?.jsonArray?.mapNotNull {
-            (it as? JsonObject)?.get("abbreviation")?.jsonPrimitive?.contentOrNull
-        }?.joinToString(", ") ?: ""
+        val orig = item.originalLessons?.firstOrNull()
+        val subject = orig?.subjectLabel ?: orig?.subject?.abbreviation ?: "Unterricht"
+        val room = orig?.room?.name.orEmpty()
+        val teachers = orig?.teachers?.mapNotNull { it.abbreviation }?.joinToString(", ").orEmpty()
 
         dayGrid[hour] = TimetableSlot(
             course = subject,
             teacher = teachers,
             room = room,
             status = LessonStatus.CANCELLED,
-            courseId = orig?.get("courseId")?.jsonPrimitive?.intOrNull,
-            lessonId = orig?.get("lessonId")?.jsonPrimitive?.intOrNull
+            courseId = orig?.courseId,
+            lessonId = orig?.lessonId
         )
 
         subsSummary.add(
@@ -185,21 +165,17 @@ object LessonsProcessor {
     }
 
     private fun processEventLesson(
-        item: JsonObject,
+        item: ActualLessonItem,
         dayGrid: MutableMap<Int, TimetableSlot?>,
         hour: Int,
         date: LocalDate,
         dayIdx: Int,
         subsSummary: MutableList<SubstitutionSummary>
     ) {
-        val event = item["event"]?.jsonObject ?: return
-        val title = event["text"]?.jsonPrimitive?.contentOrNull?.trim()?.takeIf { it.isNotBlank() }
-        val rooms = event["rooms"]?.jsonArray?.mapNotNull {
-            it.jsonObject["name"]?.jsonPrimitive?.contentOrNull
-        }?.joinToString("") ?: ""
-        val teachers = event["teachers"]?.jsonArray?.mapNotNull {
-            it.jsonObject["abbreviation"]?.jsonPrimitive?.contentOrNull
-        }?.joinToString(" , ") ?: ""
+        val event = item.event ?: return
+        val title = event.text?.trim()?.takeIf { it.isNotBlank() }
+        val rooms = event.rooms?.mapNotNull { it.name }?.joinToString("").orEmpty()
+        val teachers = event.teachers?.mapNotNull { it.abbreviation }?.joinToString(" , ").orEmpty()
 
         val existing = dayGrid[hour]
 
