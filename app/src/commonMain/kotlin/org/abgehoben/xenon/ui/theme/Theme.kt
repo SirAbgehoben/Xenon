@@ -7,7 +7,7 @@ import androidx.compose.material3.MotionScheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import org.abgehoben.xenon.platform.platformColorScheme
+import org.abgehoben.xenon.platform.LocalDynamicColorScheme
 
 private val DarkColorScheme = darkColorScheme(
     primary = Purple80,
@@ -28,11 +28,12 @@ fun XenonTheme(
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = platformColorScheme(
-        darkTheme = darkTheme,
-        dynamicColor = dynamicColor,
-        defaultDark = DarkColorScheme,
-        defaultLight = LightColorScheme
+    val dynamicResolver = LocalDynamicColorScheme.current
+    val colorScheme = dynamicResolver(
+        darkTheme,
+        dynamicColor,
+        DarkColorScheme,
+        LightColorScheme
     )
 
     MaterialExpressiveTheme(

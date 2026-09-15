@@ -1,10 +1,10 @@
 package org.abgehoben.xenon.platform
 
+import android.content.Context
 import android.widget.Toast
-import org.abgehoben.xenon.XenonApplication
 
-actual fun showToast(message: String) {
-    XenonApplication.instance?.let { context ->
+class AndroidPlatformNotifier(private val context: Context) : PlatformNotifier {
+    override fun showToast(message: String) {
         Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
     }
 }

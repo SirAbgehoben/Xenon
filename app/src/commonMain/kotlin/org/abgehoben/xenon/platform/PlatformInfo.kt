@@ -6,5 +6,3 @@ interface PlatformInfo {
     val osVersion: String
     val apiLevel: Int
 }
-
-expect fun getPlatformInfo(): PlatformInfo

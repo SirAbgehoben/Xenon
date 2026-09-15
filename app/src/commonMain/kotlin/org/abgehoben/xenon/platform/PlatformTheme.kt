@@ -1,12 +1,10 @@
 package org.abgehoben.xenon.platform
 
 import androidx.compose.material3.ColorScheme
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.staticCompositionLocalOf
 
-@Composable
-expect fun platformColorScheme(
-    darkTheme: Boolean,
-    dynamicColor: Boolean,
-    defaultDark: ColorScheme,
-    defaultLight: ColorScheme
-): ColorScheme
+val LocalDynamicColorScheme = staticCompositionLocalOf<(darkTheme: Boolean, dynamicColor: Boolean, defaultDark: ColorScheme, defaultLight: ColorScheme) -> ColorScheme> {
+    { darkTheme, _, defaultDark, defaultLight ->
+        if (darkTheme) defaultDark else defaultLight
+    }
+}

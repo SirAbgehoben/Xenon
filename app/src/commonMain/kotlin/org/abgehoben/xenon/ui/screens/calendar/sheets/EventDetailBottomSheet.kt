@@ -28,7 +28,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.core.text.HtmlCompat
 import xenon.app.generated.resources.Res
 import xenon.app.generated.resources.*
 import org.abgehoben.xenon.data.model.calendar.ProcessedEvent
@@ -153,12 +152,27 @@ fun EventDetailsBottomSheet(
                     )
                     Spacer(modifier = Modifier.width(Dimens.SpacingStandard))
                     val cleanText = remember(event.description) {
-                        HtmlCompat.fromHtml(event.description, HtmlCompat.FROM_HTML_MODE_COMPACT)
-                            .toString().trim()
+                        stripHtml(event.description)
                     }
                     Text(text = cleanText, style = MaterialTheme.typography.bodyMedium)
                 }
             }
         }
     }
+}
+
+//TODO: Temporary for now; apparently .HtmlCompat is android only ¯\_(ツ)_/¯
+private fun stripHtml(html: String): String {
+    return html
+        .replace(Regex("<br\\s*/?>", RegexOption.IGNORE_CASE), "\n")
+        .replace(Regex("<p.*?>", RegexOption.IGNORE_CASE), "")
+        .replace(Regex("</p>", RegexOption.IGNORE_CASE), "\n")
+        .replace(Regex("<[^>]*>"), "")
+        .replace("&nbsp;", " ")
+        .replace("&amp;", "&")
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&quot;", "\"")
+        .replace("&#39;", "'")
+        .trim()
 }

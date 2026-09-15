@@ -1,7 +1,5 @@
 package org.abgehoben.xenon.ui.screens.settings
 
-import android.content.ClipData
-import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -11,27 +9,28 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalClipboard
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.platform.toClipEntry
-import org.jetbrains.compose.resources.stringResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import kotlinx.coroutines.launch
-import xenon.app.generated.resources.Res
-import xenon.app.generated.resources.*
 import org.abgehoben.xenon.data.local.model.ThemeMode
 import org.abgehoben.xenon.data.local.model.UserSettings
 import org.abgehoben.xenon.data.model.auth.UserRole
 import org.abgehoben.xenon.data.model.system.CacheStats
 import org.abgehoben.xenon.data.model.timetable.TimetableViewMode
+import org.abgehoben.xenon.platform.PlatformNotifier
 import org.abgehoben.xenon.ui.screens.settings.components.SettingsClickableItem
 import org.abgehoben.xenon.ui.screens.settings.components.SettingsGroupCard
 import org.abgehoben.xenon.ui.screens.settings.components.SettingsSwitchItem
 import org.abgehoben.xenon.ui.screens.settings.dialogs.*
 import org.abgehoben.xenon.ui.screens.settings.util.labelRes
 import org.abgehoben.xenon.ui.theme.Dimens
+import org.jetbrains.compose.resources.stringResource
+import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
+import xenon.app.generated.resources.Res
+import xenon.app.generated.resources.*
 
 @Composable
 fun SettingsRoute(
@@ -84,9 +83,9 @@ fun SettingsScreen(
     onLogout: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
-    val context = LocalContext.current
-    val clipboard = LocalClipboard.current
+    val clipboardManager = LocalClipboardManager.current
     val uriHandler = LocalUriHandler.current
+    val notifier: PlatformNotifier = koinInject()
 
     val cacheClearedMsg = stringResource(Res.string.cache_cleared)
     val urlCopiedMsg = stringResource(Res.string.url_copied)
@@ -226,7 +225,7 @@ fun SettingsScreen(
                         icon = Icons.Default.CleaningServices,
                         onClick = {
                             onClearAppCache()
-                            Toast.makeText(context, cacheClearedMsg, Toast.LENGTH_SHORT).show()
+                            notifier.showToast(cacheClearedMsg)
                         }
                     )
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
@@ -322,15 +321,12 @@ fun SettingsScreen(
                     isLoadingIcal = true
                     icalUrl = onFetchIcalUrl(true)
                     isLoadingIcal = false
-                    Toast.makeText(context, icalTokenRotatedMsg, Toast.LENGTH_SHORT).show()
+                    notifier.showToast(icalTokenRotatedMsg)
                 }
             },
             onCopyUrl = { url ->
-                scope.launch {
-                    val clipData = ClipData.newPlainText("ical_url", url)
-                    clipboard.setClipEntry(clipData.toClipEntry())
-                }
-                Toast.makeText(context, urlCopiedMsg, Toast.LENGTH_SHORT).show()
+                clipboardManager.setText(AnnotatedString(url))
+                notifier.showToast(urlCopiedMsg)
             },
             onDismiss = { showIcalDialog = false }
         )

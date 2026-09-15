@@ -1,8 +1,6 @@
 package org.abgehoben.xenon.ui.screens.timetable
 
-import android.app.Application
-import android.util.Log
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineExceptionHandler
@@ -20,6 +18,7 @@ import org.abgehoben.xenon.data.local.model.UserSettings
 import org.abgehoben.xenon.data.model.timetable.TimetableGrid
 import org.abgehoben.xenon.data.model.timetable.TimetableViewMode
 import org.abgehoben.xenon.data.repository.TimetableRepository
+import org.abgehoben.xenon.platform.AppLogger
 import org.abgehoben.xenon.util.ErrorFormatter
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -28,9 +27,8 @@ import kotlin.time.Duration.Companion.milliseconds
 class TimetableViewModel(
     private val timetableRepository: TimetableRepository,
     private val sessionManager: SessionManager,
-    private val settingsManager: SettingsManager,
-    application: Application
-) : AndroidViewModel(application) {
+    private val settingsManager: SettingsManager
+) : ViewModel() {
     companion object {
         private const val TAG = "TimetableViewModel"
         private const val TIMEOUT_MS = 15_000L
@@ -60,7 +58,7 @@ class TimetableViewModel(
     private var currentJob: Job? = null
 
     private val coroutineExceptionHandler = CoroutineExceptionHandler { _, throwable ->
-        Log.e(TAG, "Timetable error: ${throwable.message}", throwable)
+        AppLogger.e(TAG, "Timetable error: ${throwable.message}", throwable)
         _syncError.value = ErrorFormatter.format(throwable)
         _isSyncing.value = false
         _isRefreshing.value = false

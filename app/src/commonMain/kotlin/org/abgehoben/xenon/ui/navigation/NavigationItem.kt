@@ -21,5 +21,4 @@ sealed class NavigationItem(
     companion object {
         val bottomNavItems = listOf(Timetable, Calendar, Settings)
     }
-
 }

@@ -1,8 +1,5 @@
 package org.abgehoben.xenon.ui.screens.settings.dialogs
 
-import android.content.ClipData
-import android.os.Build
-import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -14,19 +11,21 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalClipboard
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.toClipEntry
-import org.jetbrains.compose.resources.stringResource
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
-import xenon.app.generated.resources.Res
-import xenon.app.generated.resources.*
 import org.abgehoben.xenon.data.model.system.CacheStats
+import org.abgehoben.xenon.platform.PlatformInfo
+import org.abgehoben.xenon.platform.PlatformNotifier
 import org.abgehoben.xenon.ui.theme.Dimens
 import org.abgehoben.xenon.ui.theme.StatusSuccess
+import org.jetbrains.compose.resources.stringResource
+import org.koin.compose.koinInject
+import xenon.app.generated.resources.Res
+import xenon.app.generated.resources.*
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -41,9 +40,10 @@ fun DebugDialog(
     onPingServer: suspend () -> Pair<Boolean, Long>,
     onDismiss: () -> Unit
 ) {
-    val clipboard = LocalClipboard.current
-    val context = LocalContext.current
+    val clipboardManager = LocalClipboardManager.current
     val scope = rememberCoroutineScope()
+    val notifier: PlatformNotifier = koinInject()
+    val platformInfo: PlatformInfo = koinInject()
 
     var isPinging by remember { mutableStateOf(false) }
     var pingResult by remember { mutableStateOf<Pair<Boolean, Long>?>(null) }
@@ -253,11 +253,8 @@ fun DebugDialog(
                             IconButton(
                                 onClick = {
                                     if (jwtToken != null) {
-                                        scope.launch {
-                                            val clipData = ClipData.newPlainText("jwt_token", jwtToken)
-                                            clipboard.setClipEntry(clipData.toClipEntry())
-                                        }
-                                        Toast.makeText(context, tokenCopiedMsg, Toast.LENGTH_SHORT).show()
+                                        clipboardManager.setText(AnnotatedString(jwtToken))
+                                        notifier.showToast(tokenCopiedMsg)
                                     }
                                 },
                                 enabled = jwtToken != null,
@@ -311,7 +308,7 @@ fun DebugDialog(
                         )
                         Spacer(modifier = Modifier.height(Dimens.SpacingExtraSmall))
                         Text(
-                            text = "Device: ${Build.MANUFACTURER} ${Build.MODEL} (Android ${Build.VERSION.RELEASE}, API ${Build.VERSION.SDK_INT})",
+                            text = "Device: ${platformInfo.manufacturer} ${platformInfo.model} (${platformInfo.osVersion}, API ${platformInfo.apiLevel})",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -330,7 +327,7 @@ fun DebugDialog(
                         val report = buildString {
                             appendLine("### Xenon Diagnostic Report")
                             appendLine("- **Timestamp:** ${Instant.now()}")
-                            appendLine("- **Device:** ${Build.MANUFACTURER} ${Build.MODEL} (Android ${Build.VERSION.RELEASE}, API ${Build.VERSION.SDK_INT})")
+                            appendLine("- **Device:** ${platformInfo.manufacturer} ${platformInfo.model} (${platformInfo.osVersion}, API ${platformInfo.apiLevel})")
                             appendLine("- **Bundle Hash:** $bundleVersion")
                             appendLine("- **Schedule Load Duration:** ${lastScheduleLoadDurationMs?.let { "$it ms" } ?: "N/A"}")
                             appendLine("- **Has Token:** ${jwtToken != null}")
@@ -340,11 +337,8 @@ fun DebugDialog(
                             appendLine("- **Courses in Memory:** ${cacheStats.coursesCount}")
                             appendLine("- **ClassHours in Memory:** ${cacheStats.classHoursCount}")
                         }
-                        scope.launch {
-                            val clipData = ClipData.newPlainText("debug_report", report)
-                            clipboard.setClipEntry(clipData.toClipEntry())
-                        }
-                        Toast.makeText(context, reportCopiedMsg, Toast.LENGTH_SHORT).show()
+                        clipboardManager.setText(AnnotatedString(report))
+                        notifier.showToast(reportCopiedMsg)
                     },
                     shape = RoundedCornerShape(Dimens.RadiusMedium),
                     modifier = Modifier.fillMaxWidth()

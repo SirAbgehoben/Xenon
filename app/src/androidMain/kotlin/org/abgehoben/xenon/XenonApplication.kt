@@ -1,6 +1,7 @@
 package org.abgehoben.xenon
 
 import android.app.Application
+import org.abgehoben.xenon.di.androidPlatformModule
 import org.abgehoben.xenon.di.appModules
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.context.startKoin
@@ -17,7 +18,7 @@ class XenonApplication : Application() {
 
         startKoin {
             androidContext(this@XenonApplication)
-            modules(appModules)
+            modules(appModules + androidPlatformModule)
         }
     }
 }

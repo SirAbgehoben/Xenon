@@ -8,5 +8,3 @@ class AndroidPlatformInfo : PlatformInfo {
     override val osVersion: String = Build.VERSION.RELEASE
     override val apiLevel: Int = Build.VERSION.SDK_INT
 }
-
-actual fun getPlatformInfo(): PlatformInfo = AndroidPlatformInfo()

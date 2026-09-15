@@ -1,8 +1,6 @@
 package org.abgehoben.xenon.ui.screens.calendar
 
-import android.app.Application
-import android.util.Log
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineExceptionHandler
@@ -15,15 +13,15 @@ import kotlinx.coroutines.withTimeout
 import org.abgehoben.xenon.data.local.SessionManager
 import org.abgehoben.xenon.data.model.calendar.ProcessedEvent
 import org.abgehoben.xenon.data.repository.CalendarRepository
+import org.abgehoben.xenon.platform.AppLogger
 import org.abgehoben.xenon.util.ErrorFormatter
 import java.time.LocalDate
 import kotlin.time.Duration.Companion.milliseconds
 
 class CalendarViewModel(
     private val calendarRepository: CalendarRepository,
-    private val sessionManager: SessionManager,
-    application: Application
-) : AndroidViewModel(application) {
+    private val sessionManager: SessionManager
+) : ViewModel() {
     companion object {
         private const val TAG = "CalendarViewModel"
         private const val TIMEOUT_MS = 20_000L
@@ -44,7 +42,7 @@ class CalendarViewModel(
     private var currentJob: Job? = null
 
     private val coroutineExceptionHandler = CoroutineExceptionHandler { _, throwable ->
-        Log.e(TAG, "Calendar error: ${throwable.message}", throwable)
+        AppLogger.e(TAG, "Calendar error: ${throwable.message}", throwable)
         _syncError.value = ErrorFormatter.format(throwable)
         _isSyncing.value = false
         _isRefreshing.value = false

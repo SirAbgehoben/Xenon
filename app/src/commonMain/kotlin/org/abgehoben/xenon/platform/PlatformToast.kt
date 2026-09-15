@@ -1,3 +1,5 @@
 package org.abgehoben.xenon.platform
 
-expect fun showToast(message: String)
+interface PlatformNotifier {
+    fun showToast(message: String)
+}

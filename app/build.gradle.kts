@@ -34,28 +34,28 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
-            // Compose Multiplatform components
+            // Compose Multiplatform Core
             implementation(compose.runtime)
             implementation(compose.foundation)
             implementation(compose.ui)
             implementation(compose.components.resources)
-            implementation(compose.materialIconsExtended)
 
-            // Explicit Material 3 Expressive library:
+            // Material 3 Expressive
             implementation(libs.compose.material3)
 
-            // Architecture & lifecycle
+            // Multiplatform Material Icons via Version Catalog
+            implementation(libs.material.icons.core)
+            implementation(libs.material.icons.extended)
+
+            // Architecture & Lifecycle
             implementation(libs.androidx.navigation.compose)
             implementation(libs.androidx.lifecycle.viewmodel)
             implementation(libs.androidx.lifecycle.viewmodel.compose)
 
-            // Storage & Data
+            // Storage & Networking
             implementation(libs.androidx.datastore.preferences)
-            implementation(libs.kotlinx.datetime)
             implementation(libs.kotlinx.coroutines.core)
             implementation(libs.kotlinx.serialization.json)
-
-            // Ktor Common
             implementation(libs.ktor.client.core)
             implementation(libs.ktor.client.content.negotiation)
             implementation(libs.ktor.client.logging)
@@ -72,18 +72,6 @@ kotlin {
             implementation(libs.androidx.core.ktx)
             implementation(libs.ktor.client.okhttp)
             implementation(libs.koin.android)
-        }
-
-        commonTest.dependencies {
-            implementation(libs.junit)
-            implementation(libs.koin.test)
-        }
-
-        val androidUnitTest by getting {
-            dependencies {
-                implementation(libs.androidx.junit)
-                implementation(libs.androidx.espresso.core)
-            }
         }
     }
 }

@@ -1,8 +1,6 @@
 package org.abgehoben.xenon.ui.screens.settings
 
-import android.app.Application
-import android.util.Base64
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -26,9 +24,8 @@ class SettingsViewModel(
     private val sessionManager: SessionManager,
     private val timetableRepository: TimetableRepository,
     private val calendarRepository: CalendarRepository,
-    private val api: SchulmanagerApi,
-    application: Application
-) : AndroidViewModel(application) {
+    private val api: SchulmanagerApi
+) : ViewModel() {
 
     val userSettings: StateFlow<UserSettings> = settingsManager.userSettings
         .stateIn(viewModelScope, SharingStarted.Eagerly, UserSettings())
