@@ -51,6 +51,12 @@ ktor-client-okhttp = { group = "io.ktor", name = "ktor-client-okhttp", version.r
 
 compose-material3 = { module = "org.jetbrains.compose.material3:material3", version.ref = "composeMaterial3" }
 
+# Compose Multiplatform direct dependencies
+compose-runtime = { module = "org.jetbrains.compose.runtime:runtime", version.ref = "composePlugin" }
+compose-foundation = { module = "org.jetbrains.compose.foundation:foundation", version.ref = "composePlugin" }
+compose-ui = { module = "org.jetbrains.compose.ui:ui", version.ref = "composePlugin" }
+compose-components-resources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "composePlugin" }
+
 # Testing
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
@@ -58,6 +64,7 @@ androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-co
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
+androidMultiplatformLibrary = { id = "com.android.kotlin.multiplatform.library", version.ref = "agp" }
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 composeMultiplatform = { id = "org.jetbrains.compose", version.ref = "composePlugin" }
 composeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
