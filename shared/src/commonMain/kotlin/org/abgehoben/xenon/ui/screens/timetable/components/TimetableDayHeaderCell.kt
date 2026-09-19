@@ -14,10 +14,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import org.abgehoben.xenon.platform.PlatformDateFormatter
 import org.abgehoben.xenon.ui.theme.Dimens
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
-import java.time.format.TextStyle
+import kotlinx.datetime.LocalDate
 
 @Composable
 fun TimetableDayHeaderCell(
@@ -26,12 +25,11 @@ fun TimetableDayHeaderCell(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val currentLocale = androidx.compose.ui.text.intl.Locale.current.platformLocale
-    val dateFormatter = remember(currentLocale) {
-        DateTimeFormatter.ofPattern("dd.MM.", currentLocale)
+    val dayName = remember(date) {
+        PlatformDateFormatter.formatShortDayOfWeek(date)
     }
-    val dayName = remember(date, currentLocale) {
-        date.dayOfWeek.getDisplayName(TextStyle.SHORT, currentLocale)
+    val formattedDate = remember(date) {
+        PlatformDateFormatter.formatDayAndMonth(date)
     }
 
     val dynamicPrimary = MaterialTheme.colorScheme.primary
@@ -56,7 +54,7 @@ fun TimetableDayHeaderCell(
                 color = if (isToday) dynamicOnPrimaryContainer else MaterialTheme.colorScheme.onSurface
             )
             Text(
-                text = date.format(dateFormatter),
+                text = formattedDate,
                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
                 color = if (isToday) dynamicPrimary else MaterialTheme.colorScheme.onSurfaceVariant
             )

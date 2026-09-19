@@ -6,8 +6,9 @@ import org.abgehoben.xenon.data.model.timetable.TimetableSlot
 import org.abgehoben.xenon.data.remote.dto.calendar.CalendarResponse
 import org.abgehoben.xenon.data.remote.dto.timetable.ActualLessonItem
 import org.abgehoben.xenon.data.remote.dto.timetable.ClassHour
-import java.time.LocalDate
-import java.time.temporal.IsoFields
+import org.abgehoben.xenon.util.getIsoWeekNumber
+import org.abgehoben.xenon.util.plusDays
+import kotlinx.datetime.LocalDate
 
 object TimetableGridBuilder {
 
@@ -30,7 +31,7 @@ object TimetableGridBuilder {
             }
         }
 
-        val calWeek = monday.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)
+        val calWeek = monday.getIsoWeekNumber()
         val weekType = if (calWeek % 2 == 0) "W2" else "W1"
 
         // 1. Mark multi-day official school vacations

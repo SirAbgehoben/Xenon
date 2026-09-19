@@ -4,10 +4,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
+import kotlinx.datetime.LocalTime
 import org.abgehoben.xenon.data.remote.dto.timetable.ClassHour
 import org.abgehoben.xenon.ui.screens.timetable.util.TimetableLayoutUtils
-import java.time.Duration
-import java.time.LocalTime
+import org.abgehoben.xenon.util.TimeDurationUtils
+import org.abgehoben.xenon.util.isAfter
+import org.abgehoben.xenon.util.isBefore
+import org.abgehoben.xenon.util.now
 import kotlin.time.Duration.Companion.milliseconds
 
 @Composable
@@ -46,8 +49,8 @@ fun calculateCurrentTimeYOffset(
         val hEnd = runCatching { LocalTime.parse(endStr) }.getOrNull() ?: continue
 
         if (!now.isBefore(hStart) && !now.isAfter(hEnd)) {
-            val totalMinutes = Duration.between(hStart, hEnd).toMinutes().coerceAtLeast(1)
-            val elapsedMinutes = Duration.between(hStart, now).toMinutes()
+            val totalMinutes = TimeDurationUtils.between(hStart, hEnd).inWholeMinutes.coerceAtLeast(1)
+            val elapsedMinutes = TimeDurationUtils.between(hStart, now).inWholeMinutes
             val fraction = elapsedMinutes.toFloat() / totalMinutes
             return accumulatedY + (baseHourHeight * fraction)
         }
@@ -67,8 +70,8 @@ fun calculateCurrentTimeYOffset(
             val nextStart = runCatching { LocalTime.parse(nextStartStr) }.getOrNull()
 
             if (nextStart != null && now.isAfter(hEnd) && now.isBefore(nextStart)) {
-                val breakDuration = Duration.between(hEnd, nextStart).toMinutes().coerceAtLeast(1)
-                val elapsedBreak = Duration.between(hEnd, now).toMinutes()
+                val breakDuration = TimeDurationUtils.between(hEnd, nextStart).inWholeMinutes.coerceAtLeast(1)
+                val elapsedBreak = TimeDurationUtils.between(hEnd, now).inWholeMinutes
                 val fraction = elapsedBreak.toFloat() / breakDuration
                 return accumulatedY + (gapDp * fraction)
             }

@@ -1,6 +1,6 @@
 package org.abgehoben.xenon.data.model.calendar
 
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
 
 data class ProcessedEvent(
     val title: String,

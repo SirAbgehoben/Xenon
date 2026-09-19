@@ -20,9 +20,10 @@ import org.abgehoben.xenon.data.model.timetable.TimetableViewMode
 import org.abgehoben.xenon.data.repository.TimetableRepository
 import org.abgehoben.xenon.platform.AppLogger
 import org.abgehoben.xenon.util.ErrorFormatter
-import java.time.DayOfWeek
-import java.time.LocalDate
+import kotlinx.datetime.DayOfWeek
+import kotlinx.datetime.LocalDate
 import kotlin.time.Duration.Companion.milliseconds
+import org.abgehoben.xenon.util.*
 
 class TimetableViewModel(
     private val timetableRepository: TimetableRepository,

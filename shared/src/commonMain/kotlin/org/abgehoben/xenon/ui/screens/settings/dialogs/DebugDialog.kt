@@ -16,19 +16,18 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import kotlin.time.Clock
 import kotlinx.coroutines.launch
+import kotlinx.datetime.Instant
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import org.abgehoben.xenon.data.model.system.CacheStats
 import org.abgehoben.xenon.platform.PlatformInfo
-import org.abgehoben.xenon.platform.PlatformNotifier
 import org.abgehoben.xenon.ui.theme.Dimens
 import org.abgehoben.xenon.ui.theme.StatusSuccess
 import org.jetbrains.compose.resources.stringResource
-import org.koin.compose.koinInject
 import xenon.app.generated.resources.Res
 import xenon.app.generated.resources.*
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 
 @Composable
 fun DebugDialog(
@@ -37,13 +36,13 @@ fun DebugDialog(
     bundleVersion: String,
     cacheStats: CacheStats,
     lastScheduleLoadDurationMs: Long?,
+    platformInfo: PlatformInfo,
+    onShowToast: (String) -> Unit,
     onPingServer: suspend () -> Pair<Boolean, Long>,
     onDismiss: () -> Unit
 ) {
     val clipboardManager = LocalClipboardManager.current
     val scope = rememberCoroutineScope()
-    val notifier: PlatformNotifier = koinInject()
-    val platformInfo: PlatformInfo = koinInject()
 
     var isPinging by remember { mutableStateOf(false) }
     var pingResult by remember { mutableStateOf<Pair<Boolean, Long>?>(null) }
@@ -53,11 +52,11 @@ fun DebugDialog(
             val expRegex = """"exp"\s*:\s*(\d+)""".toRegex()
             val match = expRegex.find(decodedJwtJson ?: "")
             match?.groupValues?.get(1)?.toLongOrNull()?.let { expSec ->
-                val instant = Instant.ofEpochSecond(expSec)
-                val formatted = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss")
-                    .withZone(ZoneId.systemDefault())
-                    .format(instant)
-                val remainingHours = (expSec - Instant.now().epochSecond) / 3600
+                val instant = Instant.fromEpochSeconds(expSec)
+                val ldt = instant.toLocalDateTime(TimeZone.currentSystemDefault())
+                val formatted = "${ldt.dayOfMonth.toString().padStart(2, '0')}.${ldt.monthNumber.toString().padStart(2, '0')}.${ldt.year} " +
+                        "${ldt.hour.toString().padStart(2, '0')}:${ldt.minute.toString().padStart(2, '0')}:${ldt.second.toString().padStart(2, '0')}"
+                val remainingHours = (expSec - Clock.System.now().epochSeconds) / 3600
                 "$formatted (${remainingHours}h remaining)"
             }
         } catch (_: Exception) {
@@ -254,7 +253,7 @@ fun DebugDialog(
                                 onClick = {
                                     if (jwtToken != null) {
                                         clipboardManager.setText(AnnotatedString(jwtToken))
-                                        notifier.showToast(tokenCopiedMsg)
+                                        onShowToast(tokenCopiedMsg)
                                     }
                                 },
                                 enabled = jwtToken != null,
@@ -326,7 +325,7 @@ fun DebugDialog(
                     onClick = {
                         val report = buildString {
                             appendLine("### Xenon Diagnostic Report")
-                            appendLine("- **Timestamp:** ${Instant.now()}")
+                            appendLine("- **Timestamp:** ${Clock.System.now()}")
                             appendLine("- **Device:** ${platformInfo.manufacturer} ${platformInfo.model} (${platformInfo.osVersion}, API ${platformInfo.apiLevel})")
                             appendLine("- **Bundle Hash:** $bundleVersion")
                             appendLine("- **Schedule Load Duration:** ${lastScheduleLoadDurationMs?.let { "$it ms" } ?: "N/A"}")
@@ -338,7 +337,7 @@ fun DebugDialog(
                             appendLine("- **ClassHours in Memory:** ${cacheStats.classHoursCount}")
                         }
                         clipboardManager.setText(AnnotatedString(report))
-                        notifier.showToast(reportCopiedMsg)
+                        onShowToast(reportCopiedMsg)
                     },
                     shape = RoundedCornerShape(Dimens.RadiusMedium),
                     modifier = Modifier.fillMaxWidth()

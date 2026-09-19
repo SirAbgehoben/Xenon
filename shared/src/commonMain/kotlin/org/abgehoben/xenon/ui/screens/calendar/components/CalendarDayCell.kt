@@ -22,7 +22,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import org.abgehoben.xenon.ui.theme.Dimens
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
 
 @Composable
 fun CalendarDayCell(

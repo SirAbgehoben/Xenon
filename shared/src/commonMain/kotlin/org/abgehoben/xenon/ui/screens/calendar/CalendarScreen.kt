@@ -23,8 +23,9 @@ import org.abgehoben.xenon.ui.screens.calendar.components.MonthSelector
 import org.abgehoben.xenon.ui.screens.calendar.sheets.EventDetailsBottomSheet
 import org.abgehoben.xenon.ui.theme.Dimens
 import org.koin.compose.viewmodel.koinViewModel
-import java.time.LocalDate
-import java.time.YearMonth
+import kotlinx.datetime.LocalDate
+import org.abgehoben.xenon.util.*
+import org.abgehoben.xenon.util.YearMonth
 
 @Composable
 fun CalendarRoute(

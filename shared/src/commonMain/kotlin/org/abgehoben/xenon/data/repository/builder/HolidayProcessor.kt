@@ -4,7 +4,8 @@ import org.abgehoben.xenon.data.model.timetable.LessonStatus
 import org.abgehoben.xenon.data.model.timetable.TimetableSlot
 import org.abgehoben.xenon.data.remote.dto.calendar.CalendarResponse
 import org.abgehoben.xenon.data.repository.util.DateTimeParser
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
+import org.abgehoben.xenon.util.*
 
 object HolidayProcessor {
 

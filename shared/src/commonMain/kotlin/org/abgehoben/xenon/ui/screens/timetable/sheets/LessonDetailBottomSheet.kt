@@ -23,8 +23,9 @@ import org.abgehoben.xenon.data.model.timetable.TimetableSlot
 import org.abgehoben.xenon.data.remote.dto.timetable.ClassHour
 import org.abgehoben.xenon.ui.screens.timetable.util.TimetableLayoutUtils.getTimeRangeForHour
 import org.abgehoben.xenon.ui.screens.timetable.util.colors
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
+import kotlinx.datetime.LocalDate
+import org.abgehoben.xenon.platform.PlatformDateFormatter
+import org.abgehoben.xenon.util.plusDays
 
 private const val TAG = "LessonDetailsBottomSheet"
 
@@ -42,9 +43,8 @@ fun LessonDetailsBottomSheet(
     val combinedTime = if (startTime.isNotEmpty() && endTime.isNotEmpty()) "$startTime - $endTime" else ""
     val slotDate = mondayDate.plusDays(dayIndex.toLong() - 1)
 
-    val currentLocale = androidx.compose.ui.text.intl.Locale.current.platformLocale
-    val dateFormatter = remember(currentLocale) {
-        DateTimeFormatter.ofPattern("E | dd.MM.yy", currentLocale)
+    val formattedDate = remember(slotDate) {
+        PlatformDateFormatter.formatEventDate(slotDate)
     }
 
     val colors = slot.status.colors()
@@ -66,7 +66,7 @@ fun LessonDetailsBottomSheet(
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    text = slotDate.format(dateFormatter),
+                    text = formattedDate,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

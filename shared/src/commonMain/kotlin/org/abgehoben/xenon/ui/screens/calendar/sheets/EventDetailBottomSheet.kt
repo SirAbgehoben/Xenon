@@ -30,8 +30,8 @@ import androidx.compose.ui.text.font.FontWeight
 import xenon.app.generated.resources.Res
 import xenon.app.generated.resources.*
 import org.abgehoben.xenon.data.model.calendar.ProcessedEvent
+import org.abgehoben.xenon.platform.PlatformDateFormatter
 import org.abgehoben.xenon.ui.theme.Dimens
-import java.time.format.DateTimeFormatter
 
 @Composable
 fun EventDetailsBottomSheet(
@@ -40,9 +40,8 @@ fun EventDetailsBottomSheet(
 ) {
     val accentColor = if (event.isHoliday) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary
 
-    val currentLocale = androidx.compose.ui.text.intl.Locale.current.platformLocale
-    val dateFormatter = remember(currentLocale) {
-        DateTimeFormatter.ofPattern("E | dd.MM.yy", currentLocale)
+    val formattedDate = remember(event.startDate) {
+        PlatformDateFormatter.formatEventDate(event.startDate)
     }
 
     Column(
@@ -63,7 +62,7 @@ fun EventDetailsBottomSheet(
 
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    text = event.startDate.format(dateFormatter),
+                    text = formattedDate,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

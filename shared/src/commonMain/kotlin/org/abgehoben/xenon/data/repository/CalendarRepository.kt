@@ -12,7 +12,9 @@ import org.abgehoben.xenon.data.remote.dto.calendar.CalendarResponse
 import org.abgehoben.xenon.data.remote.dto.rpc.ApiCallRequest
 import org.abgehoben.xenon.data.repository.cache.CalendarCache
 import org.abgehoben.xenon.data.repository.util.DateTimeParser
-import java.time.LocalDate
+import org.abgehoben.xenon.util.*
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalTime
 
 class CalendarRepository(
     private val api: SchulmanagerApi,
@@ -43,8 +45,8 @@ class CalendarRepository(
                 moduleName = "calendar",
                 endpointName = "get-events-for-user",
                 parameters = buildJsonObject {
-                    put("start", startStr.format(DateTimeParser.ISO_DATE_FORMATTER))
-                    put("end", endStr.format(DateTimeParser.ISO_DATE_FORMATTER))
+                    put("start", startStr.toString())
+                    put("end", endStr.toString())
                     put("includeHolidays", true)
                 }
             )
@@ -77,8 +79,8 @@ class CalendarRepository(
                 moduleName = "calendar",
                 endpointName = "get-events-for-user",
                 parameters = buildJsonObject {
-                    put("start", startStr.format(DateTimeParser.ISO_DATE_FORMATTER))
-                    put("end", endStr.format(DateTimeParser.ISO_DATE_FORMATTER))
+                    put("start", startStr.toString())
+                    put("end", endStr.toString())
                     put("includeHolidays", true)
                 }
             ),
@@ -108,7 +110,7 @@ class CalendarRepository(
                     if (startDt != null) {
                         val sDate = startDt.toLocalDate()
                         var eDate = endDt?.toLocalDate() ?: sDate
-                        if (endDt != null && endDt.toLocalTime().isBefore(java.time.LocalTime.of(1, 0)) && eDate.isAfter(sDate)) {
+                        if (endDt != null && endDt.toLocalTime().isBefore(LocalTime(1, 0)) && eDate.isAfter(sDate)) {
                             eDate = eDate.minusDays(1)
                         }
 
@@ -118,7 +120,7 @@ class CalendarRepository(
                             location = ev.location ?: "",
                             organizer = ev.organizer ?: "",
                             category = catMap[ev.categoryId] ?: "Allgemein",
-                            allDay = ev.allDay || (startDt.toLocalTime().isBefore(java.time.LocalTime.of(1, 0)) && (endDt == null || endDt.toLocalTime().isAfter(java.time.LocalTime.of(23, 0)))),
+                            allDay = ev.allDay || (startDt.toLocalTime().isBefore(LocalTime(1, 0)) && (endDt == null || endDt.toLocalTime().isAfter(LocalTime(23, 0)))),
                             isHoliday = (ev.summary ?: ev.title ?: "").lowercase().let { it.contains("ferien") || it.contains("feiertag") },
                             startTime = startDt.toLocalTime().toString().substring(0, 5),
                             endTime = endDt?.toLocalTime()?.toString()?.substring(0, 5) ?: "",

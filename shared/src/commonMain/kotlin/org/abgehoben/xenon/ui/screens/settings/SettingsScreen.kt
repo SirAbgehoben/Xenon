@@ -19,7 +19,7 @@ import org.abgehoben.xenon.data.local.model.UserSettings
 import org.abgehoben.xenon.data.model.auth.UserRole
 import org.abgehoben.xenon.data.model.system.CacheStats
 import org.abgehoben.xenon.data.model.timetable.TimetableViewMode
-import org.abgehoben.xenon.platform.PlatformNotifier
+import org.abgehoben.xenon.platform.PlatformInfo
 import org.abgehoben.xenon.ui.screens.settings.components.SettingsClickableItem
 import org.abgehoben.xenon.ui.screens.settings.components.SettingsGroupCard
 import org.abgehoben.xenon.ui.screens.settings.components.SettingsSwitchItem
@@ -27,7 +27,6 @@ import org.abgehoben.xenon.ui.screens.settings.dialogs.*
 import org.abgehoben.xenon.ui.screens.settings.util.labelRes
 import org.abgehoben.xenon.ui.theme.Dimens
 import org.jetbrains.compose.resources.stringResource
-import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import xenon.app.generated.resources.Res
 import xenon.app.generated.resources.*
@@ -45,6 +44,8 @@ fun SettingsRoute(
         userRole = userRole,
         activeToken = activeToken,
         lastScheduleLoadDurationMs = viewModel.lastScheduleLoadDurationMs,
+        platformInfo = viewModel.platformInfo,
+        onShowToast = viewModel::showToast,
         onSetThemeMode = viewModel::setThemeMode,
         onSetDynamicColor = viewModel::setDynamicColor,
         onSetDefaultViewMode = viewModel::setDefaultViewMode,
@@ -68,6 +69,8 @@ fun SettingsScreen(
     userRole: UserRole,
     activeToken: String?,
     lastScheduleLoadDurationMs: Long?,
+    platformInfo: PlatformInfo,
+    onShowToast: (String) -> Unit,
     onSetThemeMode: (ThemeMode) -> Unit,
     onSetDynamicColor: (Boolean) -> Unit,
     onSetDefaultViewMode: (TimetableViewMode) -> Unit,
@@ -85,7 +88,6 @@ fun SettingsScreen(
     val scope = rememberCoroutineScope()
     val clipboardManager = LocalClipboardManager.current
     val uriHandler = LocalUriHandler.current
-    val notifier: PlatformNotifier = koinInject()
 
     val cacheClearedMsg = stringResource(Res.string.cache_cleared)
     val urlCopiedMsg = stringResource(Res.string.url_copied)
@@ -225,7 +227,7 @@ fun SettingsScreen(
                         icon = Icons.Default.CleaningServices,
                         onClick = {
                             onClearAppCache()
-                            notifier.showToast(cacheClearedMsg)
+                            onShowToast(cacheClearedMsg)
                         }
                     )
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
@@ -321,12 +323,12 @@ fun SettingsScreen(
                     isLoadingIcal = true
                     icalUrl = onFetchIcalUrl(true)
                     isLoadingIcal = false
-                    notifier.showToast(icalTokenRotatedMsg)
+                    onShowToast(icalTokenRotatedMsg)
                 }
             },
             onCopyUrl = { url ->
                 clipboardManager.setText(AnnotatedString(url))
-                notifier.showToast(urlCopiedMsg)
+                onShowToast(urlCopiedMsg)
             },
             onDismiss = { showIcalDialog = false }
         )
@@ -349,6 +351,8 @@ fun SettingsScreen(
             bundleVersion = "PLACEHOLDER",
             cacheStats = remember { onGetCacheStats() },
             lastScheduleLoadDurationMs = lastScheduleLoadDurationMs,
+            platformInfo = platformInfo,
+            onShowToast = onShowToast,
             onPingServer = onPingServer,
             onDismiss = { showDebugDialog = false }
         )

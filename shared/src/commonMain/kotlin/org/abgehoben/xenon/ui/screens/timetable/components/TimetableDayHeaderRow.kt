@@ -21,7 +21,8 @@ import androidx.compose.ui.text.font.FontWeight
 import xenon.app.generated.resources.Res
 import xenon.app.generated.resources.*
 import org.abgehoben.xenon.ui.theme.Dimens
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
+import org.abgehoben.xenon.util.*
 
 @Composable
 fun TimetableDayHeaderRow(

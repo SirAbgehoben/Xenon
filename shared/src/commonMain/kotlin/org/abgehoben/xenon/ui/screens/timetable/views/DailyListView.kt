@@ -42,15 +42,16 @@ import xenon.app.generated.resources.*
 import org.abgehoben.xenon.data.model.timetable.MergedSlot
 import org.abgehoben.xenon.data.model.timetable.TimetableGrid
 import org.abgehoben.xenon.data.model.timetable.TimetableSlot
+import org.abgehoben.xenon.data.repository.util.DateTimeParser
+import org.abgehoben.xenon.platform.PlatformDateFormatter
 import org.abgehoben.xenon.ui.screens.timetable.components.CompactLessonCard
 import org.abgehoben.xenon.ui.screens.timetable.components.rememberLiveTime
 import org.abgehoben.xenon.ui.screens.timetable.util.TimetableLayoutUtils
 import org.abgehoben.xenon.ui.theme.Dimens
-import java.time.Duration
-import java.time.LocalDate
-import java.time.LocalTime
-import java.time.format.DateTimeFormatter
-import java.time.format.TextStyle
+import org.abgehoben.xenon.util.*
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalTime
+import kotlinx.datetime.isoDayNumber
 
 @Composable
 fun DailyListView(
@@ -66,11 +67,6 @@ fun DailyListView(
     val nowTime = rememberLiveTime()
     val today = LocalDate.now()
 
-    val currentLocale = androidx.compose.ui.text.intl.Locale.current.platformLocale
-    val dFormatter = remember(currentLocale) {
-        DateTimeFormatter.ofPattern("dd.MM.", currentLocale)
-    }
-
     Column(modifier = Modifier.fillMaxSize()) {
         PrimaryTabRow(
             selectedTabIndex = pagerState.currentPage,
@@ -78,20 +74,21 @@ fun DailyListView(
             divider = {}
         ) {
             for (index in 0..4) {
-                val date = monday.plusDays(index.toLong())
-                val name = date.dayOfWeek.getDisplayName(TextStyle.SHORT, currentLocale)
+                val date = remember(monday, index) { monday.plusDays(index.toLong()) }
+                val name = remember(date) { PlatformDateFormatter.formatShortDayOfWeek(date) }
+                val formattedDate = remember(date) { PlatformDateFormatter.formatDayAndMonth(date) }
                 Tab(
                     selected = pagerState.currentPage == index,
                     onClick = { onTabSelected(index) },
                     text = {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
-                                name,
+                                text = name,
                                 style = MaterialTheme.typography.labelLarge,
                                 fontWeight = if (pagerState.currentPage == index) FontWeight.Black else FontWeight.Medium
                             )
                             Text(
-                                text = date.format(dFormatter),
+                                text = formattedDate,
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -115,13 +112,8 @@ fun DailyListView(
                 }
 
             val daySubs = grid.substitutions.filter { sub ->
-                val subDate = try {
-                    if (sub.date.contains("-")) LocalDate.parse(sub.date)
-                    else LocalDate.parse(sub.date, DateTimeFormatter.ofPattern("dd.MM.yyyy"))
-                } catch (_: Exception) {
-                    null
-                }
-                subDate?.dayOfWeek?.value == dayIdx
+                val subDate = DateTimeParser.parseDateFlexible(sub.date)
+                subDate?.dayOfWeek?.isoDayNumber == dayIdx
             }.distinctBy { it.text }
 
             val maxDayHour = maxOf(
@@ -215,8 +207,9 @@ fun DailyListView(
 
                         val currentProgress = if (isCurrentLesson) {
                             val totalSec =
-                                Duration.between(lessonStart, lessonEnd).seconds.coerceAtLeast(1)
-                            val elapsedSec = Duration.between(lessonStart, nowTime).seconds
+                                TimeDurationUtils.between(lessonStart, lessonEnd).inWholeSeconds.coerceAtLeast(1)
+                            val elapsedSec =
+                                TimeDurationUtils.between(lessonStart, nowTime).inWholeSeconds
                             (elapsedSec.toFloat() / totalSec).coerceIn(0f, 1f)
                         } else 0f
 
@@ -249,8 +242,9 @@ fun DailyListView(
 
                             val breakProgress = if (isCurrentBreak) {
                                 val totalSec =
-                                    Duration.between(lessonEnd, nextStart).seconds.coerceAtLeast(1)
-                                val elapsedSec = Duration.between(lessonEnd, nowTime).seconds
+                                    TimeDurationUtils.between(lessonEnd, nextStart).inWholeSeconds.coerceAtLeast(1)
+                                val elapsedSec =
+                                    TimeDurationUtils.between(lessonEnd, nowTime).inWholeSeconds
                                 (elapsedSec.toFloat() / totalSec).coerceIn(0f, 1f)
                             } else 0f
 

@@ -20,24 +20,15 @@ kotlin {
         androidResources {
             enable = true
         }
-    }
 
-    // --- Future Targets Setup ---
-    // listOf(
-    //     iosX64(),
-    //     iosArm64(),
-    //     iosSimulatorArm64()
-    // ).forEach { iosTarget ->
-    //     iosTarget.binaries.framework {
-    //         baseName = "ComposeApp"
-    //         isStatic = true
-    //     }
-    // }
-    // @OptIn(org.jetbrains.kotlin.gradle.ExperimentalWasmDsl::class)
-    // wasmJs {
-    //     browser()
-    //     binaries.executable()
-    // }
+        // 1. Opt-in to host unit tests (disabled by default in AGP 9)
+        withHostTest { }
+
+        // Optional: Opt-in to on-device instrumented tests if needed
+        // withDeviceTest {
+        //     instrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // }
+    }
 
     sourceSets {
         commonMain.dependencies {
@@ -57,6 +48,8 @@ kotlin {
             implementation(libs.androidx.lifecycle.viewmodel)
             implementation(libs.androidx.lifecycle.viewmodel.compose)
 
+            implementation(libs.kotlinx.datetime)
+
             // Storage & Networking
             implementation(libs.androidx.datastore.preferences)
             implementation(libs.kotlinx.coroutines.core)
@@ -70,6 +63,12 @@ kotlin {
             implementation(libs.koin.core)
             implementation(libs.koin.compose)
             implementation(libs.koin.compose.viewmodel)
+        }
+
+        // 2. Add test dependencies
+        commonTest.dependencies {
+            implementation(libs.junit)
+            implementation(libs.koin.test)
         }
 
         androidMain.dependencies {

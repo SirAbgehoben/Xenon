@@ -6,8 +6,8 @@ import org.abgehoben.xenon.data.model.timetable.LessonStatus
 import org.abgehoben.xenon.data.model.timetable.MergedSlot
 import org.abgehoben.xenon.data.model.timetable.TimetableSlot
 import org.abgehoben.xenon.data.remote.dto.timetable.ClassHour
-import java.time.Duration
-import java.time.LocalTime
+import org.abgehoben.xenon.util.TimeDurationUtils
+import kotlinx.datetime.LocalTime
 
 object TimetableLayoutUtils {
 
@@ -77,16 +77,13 @@ object TimetableLayoutUtils {
             try {
                 val until = LocalTime.parse(ch.until.take(8))
                 val from = LocalTime.parse(nextCh.from.take(8))
-                val diff = Duration.between(until, from).toMinutes()
+                val diff = TimeDurationUtils.between(until, from).inWholeMinutes
                 if (diff >= 0) return diff
             } catch (_: Exception) {}
         }
         return 0L
     }
 
-    /**
-     * Resolves the school's standard period duration in minutes.
-     */
     fun getStandardPeriodDurationMinutes(classHours: List<ClassHour>): Long {
         for (ch in classHours) {
             val fromStr = ch.from.take(5)
@@ -95,7 +92,7 @@ object TimetableLayoutUtils {
                 val start = runCatching { LocalTime.parse(fromStr) }.getOrNull()
                 val end = runCatching { LocalTime.parse(untilStr) }.getOrNull()
                 if (start != null && end != null) {
-                    val diff = Duration.between(start, end).toMinutes()
+                    val diff = TimeDurationUtils.between(start, end).inWholeMinutes
                     if (diff in 30..90) return diff
                 }
             }

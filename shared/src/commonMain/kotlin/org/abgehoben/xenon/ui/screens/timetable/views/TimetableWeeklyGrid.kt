@@ -32,7 +32,8 @@ import org.abgehoben.xenon.ui.screens.timetable.components.calculateCurrentTimeY
 import org.abgehoben.xenon.ui.screens.timetable.components.rememberLiveTime
 import org.abgehoben.xenon.ui.screens.timetable.util.TimetableLayoutUtils
 import org.abgehoben.xenon.ui.theme.Dimens
-import java.time.LocalDate
+import org.abgehoben.xenon.util.*
+import kotlinx.datetime.LocalDate
 
 @Composable
 fun TimetableWeeklyGrid(

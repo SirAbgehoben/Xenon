@@ -16,10 +16,6 @@ import org.abgehoben.xenon.data.remote.dto.auth.LoginResponse
 import org.abgehoben.xenon.data.remote.dto.rpc.ApiCallBundle
 import org.abgehoben.xenon.data.remote.dto.rpc.ApiCallRequest
 import org.abgehoben.xenon.data.remote.dto.rpc.ApiCallResponse
-import java.io.IOException
-import java.net.ConnectException
-import java.net.SocketTimeoutException
-import java.net.UnknownHostException
 
 class SchulmanagerApi(
     private val sessionManager: SessionManager,
@@ -89,23 +85,23 @@ class SchulmanagerApi(
                 if (response.status == HttpStatusCode.Unauthorized) {
                     AppLogger.w(TAG, "Received 401 Unauthorized, clearing session")
                     sessionManager.clearSession()
-                    throw IOException("Session expired (401)")
+                    throw Exception("Session expired (401)")
                 }
 
                 if (response.status != HttpStatusCode.OK) {
                     val errBody = response.bodyAsText()
                     AppLogger.e(TAG, "Chunk ${index + 1} failed with status ${response.status}: $errBody")
-                    throw IOException("API call chunk ${index + 1} failed with status ${response.status}: $errBody")
+                    throw Exception("API call chunk ${index + 1} failed with status ${response.status}: $errBody")
                 }
 
                 val body: ApiCallResponse = response.body()
 
                 if (body.results.any { it.status == 401 }) {
                     sessionManager.clearSession()
-                    throw IOException("Session expired (401)")
+                    throw Exception("Session expired (401)")
                 }
                 if (body.results.any { it.status == 429 }) {
-                    throw IOException("Rate limit (429)")
+                    throw Exception("Rate limit (429)")
                 }
 
                 AppLogger.d(TAG, "Chunk ${index + 1}/${chunks.size} finished successfully")
@@ -133,17 +129,7 @@ class SchulmanagerApi(
 
     private suspend fun <T> safeNetworkCall(block: suspend () -> T): T {
         return withContext(Dispatchers.IO) {
-            try {
-                block()
-            } catch (e: UnknownHostException) {
-                throw IOException("UnknownHostException", e)
-            } catch (e: ConnectException) {
-                throw IOException("ConnectException", e)
-            } catch (e: SocketTimeoutException) {
-                throw IOException("SocketTimeoutException", e)
-            } catch (e: Exception) {
-                throw e
-            }
+            block()
         }
     }
 }

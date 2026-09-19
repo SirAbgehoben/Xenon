@@ -18,13 +18,17 @@ import org.abgehoben.xenon.data.remote.SchulmanagerApi
 import org.abgehoben.xenon.data.remote.dto.rpc.ApiCallRequest
 import org.abgehoben.xenon.data.repository.CalendarRepository
 import org.abgehoben.xenon.data.repository.TimetableRepository
+import org.abgehoben.xenon.platform.PlatformInfo
+import org.abgehoben.xenon.platform.PlatformNotifier
 
 class SettingsViewModel(
     private val settingsManager: SettingsManager,
     private val sessionManager: SessionManager,
     private val timetableRepository: TimetableRepository,
     private val calendarRepository: CalendarRepository,
-    private val api: SchulmanagerApi
+    private val api: SchulmanagerApi,
+    val platformInfo: PlatformInfo,
+    private val platformNotifier: PlatformNotifier
 ) : ViewModel() {
 
     val userSettings: StateFlow<UserSettings> = settingsManager.userSettings
@@ -38,6 +42,10 @@ class SettingsViewModel(
 
     val lastScheduleLoadDurationMs: Long?
         get() = timetableRepository.lastScheduleLoadDurationMs
+
+    fun showToast(message: String) {
+        platformNotifier.showToast(message)
+    }
 
     fun setThemeMode(mode: ThemeMode) = viewModelScope.launch { settingsManager.setThemeMode(mode) }
     fun setDynamicColor(enabled: Boolean) = viewModelScope.launch { settingsManager.setDynamicColor(enabled) }

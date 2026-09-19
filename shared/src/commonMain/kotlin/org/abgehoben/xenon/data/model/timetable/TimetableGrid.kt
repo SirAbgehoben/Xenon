@@ -1,7 +1,7 @@
 package org.abgehoben.xenon.data.model.timetable
 
 import org.abgehoben.xenon.data.remote.dto.timetable.ClassHour
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
 
 data class TimetableGrid(
     val calWeek: Int,

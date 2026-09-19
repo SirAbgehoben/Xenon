@@ -23,9 +23,9 @@ import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import xenon.app.generated.resources.Res
 import xenon.app.generated.resources.*
+import org.abgehoben.xenon.platform.PlatformDateFormatter
 import org.abgehoben.xenon.ui.theme.Dimens
-import java.time.YearMonth
-import java.time.format.TextStyle
+import org.abgehoben.xenon.util.YearMonth
 
 @Composable
 fun MonthSelector(
@@ -33,9 +33,8 @@ fun MonthSelector(
     onMonthChange: (YearMonth) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val currentLocale = androidx.compose.ui.text.intl.Locale.current.platformLocale
-    val monthTitle = remember(currentMonth, currentLocale) {
-        "${currentMonth.month.getDisplayName(TextStyle.FULL, currentLocale)} ${currentMonth.year}"
+    val monthTitle = remember(currentMonth) {
+        PlatformDateFormatter.formatMonthAndYear(currentMonth.year, currentMonth.monthNumber)
     }
 
     Row(

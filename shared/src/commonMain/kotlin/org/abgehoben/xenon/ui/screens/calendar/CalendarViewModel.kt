@@ -15,7 +15,7 @@ import org.abgehoben.xenon.data.model.calendar.ProcessedEvent
 import org.abgehoben.xenon.data.repository.CalendarRepository
 import org.abgehoben.xenon.platform.AppLogger
 import org.abgehoben.xenon.util.ErrorFormatter
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
 import kotlin.time.Duration.Companion.milliseconds
 
 class CalendarViewModel(

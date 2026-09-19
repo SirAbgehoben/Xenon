@@ -14,9 +14,9 @@ import org.abgehoben.xenon.data.remote.dto.timetable.ActualLessonItem
 import org.abgehoben.xenon.data.remote.dto.timetable.ClassHour
 import org.abgehoben.xenon.data.repository.builder.TimetableGridBuilder
 import org.abgehoben.xenon.data.repository.cache.TimetableCache
-import org.abgehoben.xenon.data.repository.util.DateTimeParser
 import org.abgehoben.xenon.data.repository.util.StudentResolver
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
+import org.abgehoben.xenon.util.*
 
 class TimetableRepository(
     private val api: SchulmanagerApi,
@@ -58,8 +58,8 @@ class TimetableRepository(
         }
 
         val startTime = System.currentTimeMillis()
-        val mondayStr = monday.format(DateTimeParser.ISO_DATE_FORMATTER)
-        val sundayStr = monday.plusDays(6).format(DateTimeParser.ISO_DATE_FORMATTER)
+        val mondayStr = monday.toString()
+        val sundayStr = monday.plusDays(6).toString()
 
         // 1. Resolve student payload
         val studentJson = studentResolver.resolveActiveStudent(token)

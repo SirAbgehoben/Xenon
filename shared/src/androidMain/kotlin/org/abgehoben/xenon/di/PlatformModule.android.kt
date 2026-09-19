@@ -11,11 +11,12 @@ import org.abgehoben.xenon.platform.AndroidPlatformInfo
 import org.abgehoben.xenon.platform.AndroidPlatformNotifier
 import org.abgehoben.xenon.platform.PlatformInfo
 import org.abgehoben.xenon.platform.PlatformNotifier
+import org.koin.core.module.Module
 import org.koin.core.qualifier.named
 import org.koin.dsl.module
 import java.util.concurrent.TimeUnit
 
-val androidPlatformModule = module {
+actual val platformModule: Module = module {
     single<HttpClientEngine> {
         OkHttp.create {
             config {

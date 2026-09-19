@@ -1,21 +1,24 @@
 package org.abgehoben.xenon.data.repository.util
 
-import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
+import org.abgehoben.xenon.util.atStartOfDay
 
 object DateTimeParser {
-    val ISO_DATE_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
-    val GERMAN_DATE_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy")
-
     fun parseDateFlexible(dateStr: String?): LocalDate? {
         if (dateStr.isNullOrBlank()) return null
         return try {
             val clean = dateStr.trim().take(10)
             if (clean.contains("-")) {
-                LocalDate.parse(clean, ISO_DATE_FORMATTER)
+                LocalDate.parse(clean)
             } else if (clean.contains(".")) {
-                LocalDate.parse(clean, GERMAN_DATE_FORMATTER)
+                val parts = clean.split(".")
+                if (parts.size >= 3) {
+                    val day = parts[0].toInt()
+                    val month = parts[1].toInt()
+                    val year = parts[2].toInt()
+                    LocalDate(year, month, day)
+                } else null
             } else null
         } catch (_: Exception) {
             null
@@ -40,5 +43,11 @@ object DateTimeParser {
                 null
             }
         }
+    }
+
+    fun formatDateGerman(date: LocalDate): String {
+        val d = date.dayOfMonth.toString().padStart(2, '0')
+        val m = date.monthNumber.toString().padStart(2, '0')
+        return "$d.$m.${date.year}"
     }
 }

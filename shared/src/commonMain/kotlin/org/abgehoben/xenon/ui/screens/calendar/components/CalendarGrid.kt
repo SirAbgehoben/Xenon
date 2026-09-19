@@ -14,11 +14,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import org.abgehoben.xenon.data.model.calendar.ProcessedEvent
+import org.abgehoben.xenon.platform.PlatformDateFormatter
 import org.abgehoben.xenon.ui.theme.Dimens
-import java.time.DayOfWeek
-import java.time.LocalDate
-import java.time.YearMonth
-import java.time.format.TextStyle
+import org.abgehoben.xenon.util.*
+import org.abgehoben.xenon.util.YearMonth
+import kotlinx.datetime.LocalDate
 
 @Composable
 fun CalendarGrid(
@@ -28,18 +28,8 @@ fun CalendarGrid(
     onDateSelected: (LocalDate) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val currentLocale = androidx.compose.ui.text.intl.Locale.current.platformLocale
-
-    val dayHeaders = remember(currentLocale) {
-        listOf(
-            DayOfWeek.MONDAY,
-            DayOfWeek.TUESDAY,
-            DayOfWeek.WEDNESDAY,
-            DayOfWeek.THURSDAY,
-            DayOfWeek.FRIDAY,
-            DayOfWeek.SATURDAY,
-            DayOfWeek.SUNDAY
-        ).map { it.getDisplayName(TextStyle.SHORT, currentLocale) }
+    val dayHeaders = remember {
+        PlatformDateFormatter.getShortDayOfWeekNames()
     }
 
     val today = remember { LocalDate.now() }

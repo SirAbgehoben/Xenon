@@ -30,7 +30,8 @@ import org.abgehoben.xenon.ui.screens.timetable.views.DailyListView
 import org.abgehoben.xenon.ui.screens.timetable.views.TimetableWeeklyGrid
 import org.abgehoben.xenon.ui.theme.Dimens
 import org.koin.compose.viewmodel.koinViewModel
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
+import org.abgehoben.xenon.util.*
 
 @Composable
 fun TimetableRoute(
