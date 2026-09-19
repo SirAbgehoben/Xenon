@@ -31,7 +31,6 @@ val networkModule = module {
     single {
         val json = get<Json>()
         val engine = get<HttpClientEngine>()
-        val baseUrl = "https://login.schulmanager-online.de"
 
         HttpClient(engine) {
             install(ContentNegotiation) { json(json) }
@@ -51,9 +50,6 @@ val networkModule = module {
             defaultRequest {
                 header(HttpHeaders.ContentType, ContentType.Application.Json)
                 header(HttpHeaders.Accept, "application/json, text/plain, */*")
-                header("User-Agent", "Mozilla/5.0 Xenon Multiplatform Client")
-                header("Origin", baseUrl)
-                header("Referer", "$baseUrl/")
             }
         }
     }

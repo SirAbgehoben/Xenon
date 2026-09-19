@@ -17,6 +17,7 @@ import org.abgehoben.xenon.data.repository.cache.TimetableCache
 import org.abgehoben.xenon.data.repository.util.StudentResolver
 import kotlinx.datetime.LocalDate
 import org.abgehoben.xenon.util.*
+import kotlin.time.Clock
 
 class TimetableRepository(
     private val api: SchulmanagerApi,
@@ -57,7 +58,7 @@ class TimetableRepository(
             return memoryCache.getGrid(monday)!!
         }
 
-        val startTime = System.currentTimeMillis()
+        val startTime = Clock.System.now().toEpochMilliseconds()
         val mondayStr = monday.toString()
         val sundayStr = monday.plusDays(6).toString()
 
@@ -144,7 +145,7 @@ class TimetableRepository(
             }
 
             memoryCache.putGrid(monday, grid)
-            lastScheduleLoadDurationMs = System.currentTimeMillis() - startTime
+            lastScheduleLoadDurationMs = Clock.System.now().toEpochMilliseconds() - startTime
             return grid
         } catch (e: Throwable) {
             if (memoryCache.containsGrid(monday)) {

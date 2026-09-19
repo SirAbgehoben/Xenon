@@ -9,6 +9,10 @@ plugins {
 }
 
 kotlin {
+    compilerOptions {
+        freeCompilerArgs.add("-Xexpect-actual-classes")
+    }
+
     android {
         namespace = "org.abgehoben.xenon.shared"
         compileSdk = 37
@@ -16,7 +20,6 @@ kotlin {
 
         compilerOptions {
             jvmTarget.set(JvmTarget.JVM_21)
-            freeCompilerArgs.add("-Xexpect-actual-classes")
         }
         androidResources {
             enable = true
@@ -29,6 +32,11 @@ kotlin {
         // withDeviceTest {
         //     instrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // }
+    }
+
+    @OptIn(org.jetbrains.kotlin.gradle.ExperimentalWasmDsl::class)
+    wasmJs {
+        browser()
     }
 
     sourceSets {
@@ -76,6 +84,10 @@ kotlin {
             api(libs.androidx.core.ktx)
             api(libs.ktor.client.okhttp)
             api(libs.koin.android)
+        }
+
+        wasmJsMain.dependencies {
+            api(libs.ktor.client.js)
         }
     }
 }

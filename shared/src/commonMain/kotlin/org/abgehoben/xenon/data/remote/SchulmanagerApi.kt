@@ -16,6 +16,7 @@ import org.abgehoben.xenon.data.remote.dto.auth.LoginResponse
 import org.abgehoben.xenon.data.remote.dto.rpc.ApiCallBundle
 import org.abgehoben.xenon.data.remote.dto.rpc.ApiCallRequest
 import org.abgehoben.xenon.data.remote.dto.rpc.ApiCallResponse
+import org.abgehoben.xenon.platform.apiBaseUrl
 
 class SchulmanagerApi(
     private val sessionManager: SessionManager,
@@ -25,7 +26,7 @@ class SchulmanagerApi(
         private const val TAG = "SchulmanagerApi"
     }
 
-    private val baseUrl = "https://login.schulmanager-online.de"
+    private val baseUrl = apiBaseUrl
 
     suspend fun login(
         username: String,
@@ -128,8 +129,6 @@ class SchulmanagerApi(
     }
 
     private suspend fun <T> safeNetworkCall(block: suspend () -> T): T {
-        return withContext(Dispatchers.IO) {
-            block()
-        }
+        return block()
     }
 }

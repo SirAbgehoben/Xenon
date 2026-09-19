@@ -20,6 +20,7 @@ import org.abgehoben.xenon.data.repository.CalendarRepository
 import org.abgehoben.xenon.data.repository.TimetableRepository
 import org.abgehoben.xenon.platform.PlatformInfo
 import org.abgehoben.xenon.platform.PlatformNotifier
+import kotlin.time.Clock
 
 class SettingsViewModel(
     private val settingsManager: SettingsManager,
@@ -67,17 +68,17 @@ class SettingsViewModel(
     fun getTimetableCacheStats(): CacheStats = timetableRepository.getCacheStats()
 
     suspend fun pingServer(): Pair<Boolean, Long> {
-        val start = System.currentTimeMillis()
+        val start = Clock.System.now().toEpochMilliseconds()
         return try {
             val response = api.fetchCallsChunked(
                 token = jwtToken.value ?: "",
                 requests = listOf(ApiCallRequest("main", "login-status", buildJsonObject {})),
                 chunkSize = 1
             )
-            val latency = System.currentTimeMillis() - start
+            val latency = Clock.System.now().toEpochMilliseconds() - start
             Pair(response.results.isNotEmpty(), latency)
         } catch (_: Exception) {
-            val latency = System.currentTimeMillis() - start
+            val latency = Clock.System.now().toEpochMilliseconds() - start
             Pair(false, latency)
         }
     }
