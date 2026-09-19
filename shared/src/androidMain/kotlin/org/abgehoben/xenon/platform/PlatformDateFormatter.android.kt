@@ -3,6 +3,7 @@ package org.abgehoben.xenon.platform
 import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.isoDayNumber
+import kotlinx.datetime.number
 import java.time.format.TextStyle
 import java.util.Locale
 
@@ -35,8 +36,8 @@ actual object PlatformDateFormatter {
     }
 
     actual fun formatDayAndMonth(date: LocalDate): String {
-        val d = date.dayOfMonth.toString().padStart(2, '0')
-        val m = date.monthNumber.toString().padStart(2, '0')
+        val d = date.day.toString().padStart(2, '0')
+        val m = date.month.number.toString().padStart(2, '0')
         return "$d.$m."
     }
 
@@ -48,8 +49,8 @@ actual object PlatformDateFormatter {
 
     actual fun formatEventDate(date: LocalDate): String {
         val dow = formatShortDayOfWeek(date)
-        val d = date.dayOfMonth.toString().padStart(2, '0')
-        val m = date.monthNumber.toString().padStart(2, '0')
+        val d = date.day.toString().padStart(2, '0')
+        val m = date.month.number.toString().padStart(2, '0')
         val y = (date.year % 100).toString().padStart(2, '0')
         return "$dow | $d.$m.$y"
     }

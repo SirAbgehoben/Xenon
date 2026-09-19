@@ -12,6 +12,7 @@ import kotlinx.datetime.Month
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.isoDayNumber
 import kotlinx.datetime.minus
+import kotlinx.datetime.number
 import kotlinx.datetime.plus
 import kotlinx.datetime.toLocalDateTime
 
@@ -36,10 +37,10 @@ fun LocalDate.plusYears(years: Long): LocalDate = this.plus(years.toInt(), DateT
 fun LocalDate.minusYears(years: Int): LocalDate = this.minus(years, DateTimeUnit.YEAR)
 fun LocalDate.minusYears(years: Long): LocalDate = this.minus(years.toInt(), DateTimeUnit.YEAR)
 
-fun LocalDate.withMonth(month: Int): LocalDate = LocalDate(this.year, month, this.dayOfMonth.coerceAtMost(28))
-fun LocalDate.withDayOfMonth(day: Int): LocalDate = LocalDate(this.year, this.monthNumber, day)
+fun LocalDate.withMonth(month: Int): LocalDate = LocalDate(this.year, month, this.day.coerceAtMost(28))
+fun LocalDate.withDayOfMonth(day: Int): LocalDate = LocalDate(this.year, this.month.number, day)
 
-val LocalDate.monthValue: Int get() = this.monthNumber
+val LocalDate.monthValue: Int get() = this.month.number
 
 fun LocalDate.isBefore(other: LocalDate): Boolean = this < other
 fun LocalDate.isAfter(other: LocalDate): Boolean = this > other
@@ -52,8 +53,6 @@ fun LocalDate.atStartOfDay(): LocalDateTime = LocalDateTime(this, LocalTime(0, 0
 
 val DayOfWeek.value: Int get() = this.isoDayNumber
 
-fun LocalTime.toSecondOfDay(): Int = hour * 3600 + minute * 60 + second
-
 object TimeDurationUtils {
     fun between(start: LocalTime, end: LocalTime): Duration {
         val diffSeconds = end.toSecondOfDay() - start.toSecondOfDay()
@@ -65,7 +64,7 @@ data class YearMonth(val year: Int, val monthNumber: Int) : Comparable<YearMonth
     companion object {
         fun now(): YearMonth {
             val today = LocalDate.now()
-            return YearMonth(today.year, today.monthNumber)
+            return YearMonth(today.year, today.month.number)
         }
     }
 

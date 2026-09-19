@@ -11,18 +11,19 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import kotlin.time.Clock
+import kotlin.time.Instant
 import kotlinx.coroutines.launch
-import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.number
 import kotlinx.datetime.toLocalDateTime
 import org.abgehoben.xenon.data.model.system.CacheStats
 import org.abgehoben.xenon.platform.PlatformInfo
+import org.abgehoben.xenon.platform.toClipEntry
 import org.abgehoben.xenon.ui.theme.Dimens
 import org.abgehoben.xenon.ui.theme.StatusSuccess
 import org.jetbrains.compose.resources.stringResource
@@ -41,7 +42,7 @@ fun DebugDialog(
     onPingServer: suspend () -> Pair<Boolean, Long>,
     onDismiss: () -> Unit
 ) {
-    val clipboardManager = LocalClipboardManager.current
+    val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
 
     var isPinging by remember { mutableStateOf(false) }
@@ -54,7 +55,7 @@ fun DebugDialog(
             match?.groupValues?.get(1)?.toLongOrNull()?.let { expSec ->
                 val instant = Instant.fromEpochSeconds(expSec)
                 val ldt = instant.toLocalDateTime(TimeZone.currentSystemDefault())
-                val formatted = "${ldt.dayOfMonth.toString().padStart(2, '0')}.${ldt.monthNumber.toString().padStart(2, '0')}.${ldt.year} " +
+                val formatted = "${ldt.day.toString().padStart(2, '0')}.${ldt.month.number.toString().padStart(2, '0')}.${ldt.year} " +
                         "${ldt.hour.toString().padStart(2, '0')}:${ldt.minute.toString().padStart(2, '0')}:${ldt.second.toString().padStart(2, '0')}"
                 val remainingHours = (expSec - Clock.System.now().epochSeconds) / 3600
                 "$formatted (${remainingHours}h remaining)"
@@ -252,8 +253,10 @@ fun DebugDialog(
                             IconButton(
                                 onClick = {
                                     if (jwtToken != null) {
-                                        clipboardManager.setText(AnnotatedString(jwtToken))
-                                        onShowToast(tokenCopiedMsg)
+                                        scope.launch {
+                                            clipboard.setClipEntry(jwtToken.toClipEntry())
+                                            onShowToast(tokenCopiedMsg)
+                                        }
                                     }
                                 },
                                 enabled = jwtToken != null,
@@ -336,8 +339,10 @@ fun DebugDialog(
                             appendLine("- **Courses in Memory:** ${cacheStats.coursesCount}")
                             appendLine("- **ClassHours in Memory:** ${cacheStats.classHoursCount}")
                         }
-                        clipboardManager.setText(AnnotatedString(report))
-                        onShowToast(reportCopiedMsg)
+                        scope.launch {
+                            clipboard.setClipEntry(report.toClipEntry())
+                            onShowToast(reportCopiedMsg)
+                        }
                     },
                     shape = RoundedCornerShape(Dimens.RadiusMedium),
                     modifier = Modifier.fillMaxWidth()

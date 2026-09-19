@@ -84,7 +84,7 @@ fun CalendarScreen(
                     onMonthChange = { newMonth ->
                         currentMonth = newMonth
                         if (selectedDate.year != newMonth.year || selectedDate.month != newMonth.month) {
-                            val clampedDay = selectedDate.dayOfMonth.coerceAtMost(newMonth.lengthOfMonth())
+                            val clampedDay = selectedDate.day.coerceAtMost(newMonth.lengthOfMonth())
                             selectedDate = newMonth.atDay(clampedDay)
                         }
                     }

@@ -9,9 +9,8 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import kotlinx.coroutines.launch
 import org.abgehoben.xenon.data.local.model.ThemeMode
@@ -20,6 +19,7 @@ import org.abgehoben.xenon.data.model.auth.UserRole
 import org.abgehoben.xenon.data.model.system.CacheStats
 import org.abgehoben.xenon.data.model.timetable.TimetableViewMode
 import org.abgehoben.xenon.platform.PlatformInfo
+import org.abgehoben.xenon.platform.toClipEntry
 import org.abgehoben.xenon.ui.screens.settings.components.SettingsClickableItem
 import org.abgehoben.xenon.ui.screens.settings.components.SettingsGroupCard
 import org.abgehoben.xenon.ui.screens.settings.components.SettingsSwitchItem
@@ -86,7 +86,7 @@ fun SettingsScreen(
     onLogout: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
-    val clipboardManager = LocalClipboardManager.current
+    val clipboard = LocalClipboard.current
     val uriHandler = LocalUriHandler.current
 
     val cacheClearedMsg = stringResource(Res.string.cache_cleared)
@@ -327,8 +327,10 @@ fun SettingsScreen(
                 }
             },
             onCopyUrl = { url ->
-                clipboardManager.setText(AnnotatedString(url))
-                onShowToast(urlCopiedMsg)
+                scope.launch {
+                    clipboard.setClipEntry(url.toClipEntry())
+                    onShowToast(urlCopiedMsg)
+                }
             },
             onDismiss = { showIcalDialog = false }
         )

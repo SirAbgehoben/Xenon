@@ -2,6 +2,7 @@ package org.abgehoben.xenon.data.repository.util
 
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.number
 import org.abgehoben.xenon.util.atStartOfDay
 
 object DateTimeParser {
@@ -46,8 +47,8 @@ object DateTimeParser {
     }
 
     fun formatDateGerman(date: LocalDate): String {
-        val d = date.dayOfMonth.toString().padStart(2, '0')
-        val m = date.monthNumber.toString().padStart(2, '0')
+        val d = date.day.toString().padStart(2, '0')
+        val m = date.month.number.toString().padStart(2, '0')
         return "$d.$m.${date.year}"
     }
 }

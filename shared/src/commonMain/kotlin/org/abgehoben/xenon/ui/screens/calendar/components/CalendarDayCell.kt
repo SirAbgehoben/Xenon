@@ -66,7 +66,7 @@ fun CalendarDayCell(
             verticalArrangement = Arrangement.Center
         ) {
             Text(
-                text = date.dayOfMonth.toString(),
+                text = date.day.toString(),
                 style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
                 fontWeight = if (isToday || isSelected) FontWeight.Black else FontWeight.Medium,
                 color = textColor
