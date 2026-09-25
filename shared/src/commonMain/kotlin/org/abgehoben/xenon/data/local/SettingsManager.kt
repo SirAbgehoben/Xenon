@@ -4,6 +4,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -20,6 +21,7 @@ class SettingsManager(private val dataStore: DataStore<Preferences>) {
         private val KEY_WEEKEND_ADVANCE = booleanPreferencesKey("weekend_advance")
         private val KEY_SCALE_BREAKS = booleanPreferencesKey("scale_breaks")
         private val KEY_PRELOAD_WEEKS = booleanPreferencesKey("preload_weeks")
+        private val KEY_WEEKLY_COL_WIDTH = floatPreferencesKey("weekly_col_width")
     }
 
     val userSettings: Flow<UserSettings> = dataStore.data.map { prefs ->
@@ -33,7 +35,8 @@ class SettingsManager(private val dataStore: DataStore<Preferences>) {
             mergeLessons = prefs[KEY_MERGE_LESSONS] ?: true,
             weekendAdvance = prefs[KEY_WEEKEND_ADVANCE] ?: true,
             scaleBreaks = prefs[KEY_SCALE_BREAKS] ?: true,
-            preloadWeeks = prefs[KEY_PRELOAD_WEEKS] ?: true
+            preloadWeeks = prefs[KEY_PRELOAD_WEEKS] ?: true,
+            weeklyColWidth = prefs[KEY_WEEKLY_COL_WIDTH]
         )
     }
 
@@ -44,4 +47,5 @@ class SettingsManager(private val dataStore: DataStore<Preferences>) {
     suspend fun setWeekendAdvance(enabled: Boolean) = dataStore.edit { it[KEY_WEEKEND_ADVANCE] = enabled }
     suspend fun setScaleBreaks(enabled: Boolean) = dataStore.edit { it[KEY_SCALE_BREAKS] = enabled }
     suspend fun setPreloadWeeks(enabled: Boolean) = dataStore.edit { it[KEY_PRELOAD_WEEKS] = enabled }
+    suspend fun setWeeklyColWidth(width: Float) = dataStore.edit { it[KEY_WEEKLY_COL_WIDTH] = width } // <-- Write
 }

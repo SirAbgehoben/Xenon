@@ -28,7 +28,11 @@ import org.abgehoben.xenon.ui.screens.timetable.util.colors
 import org.abgehoben.xenon.ui.theme.Dimens
 
 @Composable
-fun TimetableGridCell(slot: TimetableSlot, span: Int = 1) {
+fun TimetableGridCell(
+    slot: TimetableSlot,
+    span: Int = 1,
+    isCompact: Boolean = false
+) {
     val colors = slot.status.colors()
 
     Surface(
@@ -41,11 +45,11 @@ fun TimetableGridCell(slot: TimetableSlot, span: Int = 1) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(Dimens.SpacingStandard),
+                    .padding(if (isCompact) Dimens.SpacingExtraSmall else Dimens.SpacingStandard),
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    if (span >= 2) {
+                    if (span >= 2 && !isCompact) {
                         Icon(
                             Icons.Default.CalendarToday,
                             contentDescription = null,
@@ -57,7 +61,7 @@ fun TimetableGridCell(slot: TimetableSlot, span: Int = 1) {
                     Text(
                         text = slot.course,
                         style = MaterialTheme.typography.labelMedium.copy(
-                            fontSize = if (span >= 2) 11.5.sp else 9.sp,
+                            fontSize = if (span >= 2) (if (isCompact) 9.5.sp else 11.5.sp) else (if (isCompact) 8.sp else 9.sp),
                             fontWeight = FontWeight.Black
                         ),
                         color = colors.onContainer,
@@ -72,7 +76,7 @@ fun TimetableGridCell(slot: TimetableSlot, span: Int = 1) {
                 Box(
                     modifier = Modifier
                         .padding(start = Dimens.SpacingExtraSmall)
-                        .width(3.5.dp)
+                        .width(if (isCompact) 2.5.dp else 3.5.dp)
                         .fillMaxHeight(0.75f)
                         .clip(CircleShape)
                         .background(colors.accent)
@@ -82,7 +86,7 @@ fun TimetableGridCell(slot: TimetableSlot, span: Int = 1) {
                     modifier = Modifier
                         .weight(1f)
                         .padding(
-                            horizontal = Dimens.SpacingSmall,
+                            horizontal = if (isCompact) Dimens.SpacingExtraSmall else Dimens.SpacingSmall,
                             vertical = if (span >= 2) Dimens.SpacingStandard else Dimens.SpacingExtraSmall
                         ),
                     verticalArrangement = if (span >= 2) Arrangement.SpaceEvenly else Arrangement.SpaceBetween
@@ -97,7 +101,7 @@ fun TimetableGridCell(slot: TimetableSlot, span: Int = 1) {
                                 Text(
                                     text = stringResource(Res.string.cancelled_prefix, slot.course),
                                     style = MaterialTheme.typography.labelSmall.copy(
-                                        fontSize = 8.5.sp,
+                                        fontSize = if (isCompact) 7.5.sp else 8.5.sp,
                                         fontWeight = FontWeight.Bold
                                     ),
                                     color = MaterialTheme.colorScheme.error,
@@ -110,7 +114,7 @@ fun TimetableGridCell(slot: TimetableSlot, span: Int = 1) {
                                 Text(
                                     text = displayText,
                                     style = MaterialTheme.typography.labelSmall.copy(
-                                        fontSize = if (span >= 2) 11.sp else 9.5.sp,
+                                        fontSize = if (span >= 2) (if (isCompact) 10.sp else 11.sp) else (if (isCompact) 8.5.sp else 9.5.sp),
                                         fontWeight = FontWeight.Black
                                     ),
                                     maxLines = if (span >= 2) 2 else 1,
@@ -120,7 +124,8 @@ fun TimetableGridCell(slot: TimetableSlot, span: Int = 1) {
                             }
                         }
 
-                        if (slot.teacher.isNotEmpty()) {
+                        // When squished compact, hide teacher on 1-hour slots so subject name remains readable
+                        if (slot.teacher.isNotEmpty() && (!isCompact || span >= 2)) {
                             Text(
                                 text = slot.teacher,
                                 style = MaterialTheme.typography.labelSmall.copy(
@@ -132,7 +137,7 @@ fun TimetableGridCell(slot: TimetableSlot, span: Int = 1) {
                                 overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier
                                     .padding(start = Dimens.SpacingExtraSmall)
-                                    .widthIn(max = 38.dp)
+                                    .widthIn(max = if (isCompact) 28.dp else 38.dp)
                             )
                         }
                     }
@@ -147,7 +152,7 @@ fun TimetableGridCell(slot: TimetableSlot, span: Int = 1) {
                             Text(
                                 text = rName,
                                 style = MaterialTheme.typography.labelSmall.copy(
-                                    fontSize = if (span >= 2) 10.5.sp else 9.sp,
+                                    fontSize = if (span >= 2) (if (isCompact) 9.5.sp else 10.5.sp) else (if (isCompact) 8.sp else 9.sp),
                                     fontWeight = FontWeight.Black
                                 ),
                                 color = if (slot.status == LessonStatus.SUBSTITUTION) colors.accent else MaterialTheme.colorScheme.onSurfaceVariant,
@@ -155,7 +160,7 @@ fun TimetableGridCell(slot: TimetableSlot, span: Int = 1) {
                                 overflow = TextOverflow.Ellipsis
                             )
 
-                            if (span >= 2) {
+                            if (span >= 2 && !isCompact) {
                                 Text(
                                     text = stringResource(Res.string.periods_count, span),
                                     style = MaterialTheme.typography.labelSmall.copy(

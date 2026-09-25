@@ -129,4 +129,10 @@ class TimetableViewModel(
             }
         }
     }
+
+    fun setWeeklyColWidth(width: Float) {
+        viewModelScope.launch {
+            settingsManager.setWeeklyColWidth(width)
+        }
+    }
 }

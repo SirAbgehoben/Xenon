@@ -1,6 +1,7 @@
 package org.abgehoben.xenon.ui.screens.timetable.components
 
 import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,13 +17,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import xenon.app.generated.resources.Res
-import xenon.app.generated.resources.*
-import org.abgehoben.xenon.ui.theme.Dimens
+import androidx.compose.ui.unit.Dp
 import kotlinx.datetime.LocalDate
-import org.abgehoben.xenon.util.*
+import org.abgehoben.xenon.ui.theme.Dimens
+import org.abgehoben.xenon.util.now
+import org.abgehoben.xenon.util.plusDays
+import org.jetbrains.compose.resources.stringResource
+import xenon.app.generated.resources.Res
+import xenon.app.generated.resources.period_abbr
 
 @Composable
 fun TimetableDayHeaderRow(
@@ -30,7 +33,9 @@ fun TimetableDayHeaderRow(
     scrollState: ScrollState,
     onDayClick: (dayOffset: Int) -> Unit,
     modifier: Modifier = Modifier,
-    daysCount: Int = 5
+    colWidth: Dp = Dimens.TimetableColWidth,
+    daysCount: Int = 5,
+    onCornerClick: (() -> Unit)? = null
 ) {
     val today = remember { LocalDate.now() }
 
@@ -46,7 +51,12 @@ fun TimetableDayHeaderRow(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
-                modifier = Modifier.width(Dimens.TimetableTimeColWidth),
+                modifier = Modifier
+                    .width(Dimens.TimetableTimeColWidth)
+                    .then(
+                        if (onCornerClick != null) Modifier.clickable(onClick = onCornerClick)
+                        else Modifier
+                    ),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
@@ -68,7 +78,7 @@ fun TimetableDayHeaderRow(
                     val isToday = date == today
 
                     Box(
-                        modifier = Modifier.width(Dimens.TimetableColWidth),
+                        modifier = Modifier.width(colWidth),
                         contentAlignment = Alignment.Center
                     ) {
                         TimetableDayHeaderCell(

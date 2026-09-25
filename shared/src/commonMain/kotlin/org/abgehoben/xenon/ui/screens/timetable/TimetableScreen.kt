@@ -52,7 +52,8 @@ fun TimetableRoute(
         onPrevWeek = viewModel::prevWeek,
         onNextWeek = viewModel::nextWeek,
         onRefresh = { viewModel.refreshData(forceRefresh = true) },
-        onViewModeChange = viewModel::setTimetableViewMode
+        onViewModeChange = viewModel::setTimetableViewMode,
+        onColWidthChange = viewModel::setWeeklyColWidth
     )
 }
 
@@ -67,7 +68,8 @@ fun TimetableScreen(
     onPrevWeek: () -> Unit,
     onNextWeek: () -> Unit,
     onRefresh: () -> Unit,
-    onViewModeChange: (TimetableViewMode) -> Unit
+    onViewModeChange: (TimetableViewMode) -> Unit,
+    onColWidthChange: (Float) -> Unit = {}
 ) {
     val scope = rememberCoroutineScope()
     var selectedSlot by remember { mutableStateOf<Triple<Int, MergedSlot, TimetableSlot>?>(null) }
@@ -143,6 +145,8 @@ fun TimetableScreen(
                         TimetableViewMode.WEEKLY -> {
                             TimetableWeeklyGrid(
                                 grid = grid,
+                                savedColWidth = userSettings.weeklyColWidth,
+                                onColWidthChange = onColWidthChange,
                                 mergeLessons = userSettings.mergeLessons,
                                 scaleBreaks = userSettings.scaleBreaks,
                                 onSlotClick = { d, merged, slot -> selectedSlot = Triple(d, merged, slot) },

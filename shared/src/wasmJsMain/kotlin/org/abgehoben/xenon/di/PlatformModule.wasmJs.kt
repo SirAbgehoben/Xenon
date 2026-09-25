@@ -3,6 +3,7 @@ package org.abgehoben.xenon.di
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.mutablePreferencesOf
@@ -41,7 +42,7 @@ actual val platformModule: Module = module {
  * Resolves the NotImplementedError thrown by PreferenceDataStoreFactory.createWithPath on wasmJs.
  */
 private class WasmPreferencesDataStore(
-    private val storeName: String
+    storeName: String
 ) : DataStore<Preferences> {
 
     private val prefix = "$storeName::"
@@ -71,6 +72,7 @@ private class WasmPreferencesDataStore(
                     rawValue.startsWith("i:") -> rawValue.substring(2).toIntOrNull()?.let { mutable[intPreferencesKey(keyName)] = it }
                     rawValue.startsWith("l:") -> rawValue.substring(2).toLongOrNull()?.let { mutable[longPreferencesKey(keyName)] = it }
                     rawValue.startsWith("s:") -> mutable[stringPreferencesKey(keyName)] = rawValue.substring(2)
+                    rawValue.startsWith("f:") -> rawValue.substring(2).toFloatOrNull()?.let { mutable[floatPreferencesKey(keyName)] = it }
                     else -> mutable[stringPreferencesKey(keyName)] = rawValue
                 }
             }
@@ -97,6 +99,7 @@ private class WasmPreferencesDataStore(
                 is Boolean -> "b:$value"
                 is Int -> "i:$value"
                 is Long -> "l:$value"
+                is Float -> "f:$value"
                 is String -> "s:$value"
                 else -> "s:$value"
             }
