@@ -130,7 +130,13 @@ class TimetableViewModel(
         }
     }
 
+    val weeklyColWidth: StateFlow<Float?> = settingsManager.weeklyColWidth
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
     fun setWeeklyColWidth(width: Float) {
+        val current = weeklyColWidth.value ?: 0f
+        if (kotlin.math.abs(current - width) < 1f) return
+
         viewModelScope.launch {
             settingsManager.setWeeklyColWidth(width)
         }

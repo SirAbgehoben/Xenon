@@ -35,9 +35,12 @@ class SettingsManager(private val dataStore: DataStore<Preferences>) {
             mergeLessons = prefs[KEY_MERGE_LESSONS] ?: true,
             weekendAdvance = prefs[KEY_WEEKEND_ADVANCE] ?: true,
             scaleBreaks = prefs[KEY_SCALE_BREAKS] ?: true,
-            preloadWeeks = prefs[KEY_PRELOAD_WEEKS] ?: true,
-            weeklyColWidth = prefs[KEY_WEEKLY_COL_WIDTH]
+            preloadWeeks = prefs[KEY_PRELOAD_WEEKS] ?: true
         )
+    }
+
+    val weeklyColWidth: Flow<Float?> = dataStore.data.map { prefs ->
+        prefs[KEY_WEEKLY_COL_WIDTH]
     }
 
     suspend fun setThemeMode(mode: ThemeMode) = dataStore.edit { it[KEY_THEME_MODE] = mode.name }
@@ -47,5 +50,5 @@ class SettingsManager(private val dataStore: DataStore<Preferences>) {
     suspend fun setWeekendAdvance(enabled: Boolean) = dataStore.edit { it[KEY_WEEKEND_ADVANCE] = enabled }
     suspend fun setScaleBreaks(enabled: Boolean) = dataStore.edit { it[KEY_SCALE_BREAKS] = enabled }
     suspend fun setPreloadWeeks(enabled: Boolean) = dataStore.edit { it[KEY_PRELOAD_WEEKS] = enabled }
-    suspend fun setWeeklyColWidth(width: Float) = dataStore.edit { it[KEY_WEEKLY_COL_WIDTH] = width } // <-- Write
+    suspend fun setWeeklyColWidth(width: Float) = dataStore.edit { it[KEY_WEEKLY_COL_WIDTH] = width }
 }

@@ -42,6 +42,7 @@ fun TimetableRoute(
     val isRefreshing by viewModel.isRefreshing.collectAsState()
     val viewMode by viewModel.timetableViewMode.collectAsState()
     val userSettings by viewModel.userSettings.collectAsState()
+    val savedColWidth by viewModel.weeklyColWidth.collectAsState()
 
     TimetableScreen(
         grid = timetableGrid,
@@ -49,6 +50,7 @@ fun TimetableRoute(
         isRefreshing = isRefreshing,
         viewMode = viewMode,
         userSettings = userSettings,
+        savedColWidth = savedColWidth,
         onPrevWeek = viewModel::prevWeek,
         onNextWeek = viewModel::nextWeek,
         onRefresh = { viewModel.refreshData(forceRefresh = true) },
@@ -56,6 +58,7 @@ fun TimetableRoute(
         onColWidthChange = viewModel::setWeeklyColWidth
     )
 }
+
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -65,6 +68,7 @@ fun TimetableScreen(
     isRefreshing: Boolean,
     viewMode: TimetableViewMode,
     userSettings: UserSettings,
+    savedColWidth: Float? = null,
     onPrevWeek: () -> Unit,
     onNextWeek: () -> Unit,
     onRefresh: () -> Unit,
@@ -145,7 +149,7 @@ fun TimetableScreen(
                         TimetableViewMode.WEEKLY -> {
                             TimetableWeeklyGrid(
                                 grid = grid,
-                                savedColWidth = userSettings.weeklyColWidth,
+                                savedColWidth = savedColWidth,
                                 onColWidthChange = onColWidthChange,
                                 mergeLessons = userSettings.mergeLessons,
                                 scaleBreaks = userSettings.scaleBreaks,

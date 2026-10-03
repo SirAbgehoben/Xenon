@@ -9,6 +9,5 @@ data class UserSettings(
     val mergeLessons: Boolean = true,
     val weekendAdvance: Boolean = true,
     val scaleBreaks: Boolean = true,
-    val preloadWeeks: Boolean = true,
-    val weeklyColWidth: Float? = null
+    val preloadWeeks: Boolean = true
 )

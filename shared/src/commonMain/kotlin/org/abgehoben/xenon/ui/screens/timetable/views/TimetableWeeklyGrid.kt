@@ -29,8 +29,8 @@ import org.abgehoben.xenon.util.*
 @Composable
 fun TimetableWeeklyGrid(
     grid: TimetableGrid,
-    savedColWidth: Float?,
-    onColWidthChange: (Float) -> Unit,
+    savedColWidth: Float? = null,
+    onColWidthChange: (Float) -> Unit = {},
     mergeLessons: Boolean = true,
     scaleBreaks: Boolean = true,
     onSlotClick: (Int, MergedSlot, TimetableSlot) -> Unit,
@@ -53,34 +53,97 @@ fun TimetableWeeklyGrid(
     val today = LocalDate.now()
     val isCurrentWeek = !today.isBefore(grid.mondayDate) && !today.isAfter(grid.mondayDate.plusDays(4))
     val currentDayIndex = today.dayOfWeek.value
-
     val dynamicPrimary = MaterialTheme.colorScheme.primary
 
+    // 1. PRE-CALCULATE static timetable data once so the pinch loop does ZERO allocations
     val standardPeriodMinutes = remember(classHours) {
         TimetableLayoutUtils.getStandardPeriodDurationMinutes(classHours)
     }
 
-    val breakMinutesList = remember(totalHours, minHour, classHours) {
-        (minHour until totalHours).map { h ->
+    val breakMinutesMap = remember(totalHours, minHour, classHours) {
+        (minHour..totalHours).associateWith { h ->
             TimetableLayoutUtils.getBreakMinutesAfter(h, classHours)
+        }
+    }
+
+    val dayMergedSlots = remember(grid, mergeLessons, minHour, totalHours) {
+        (1..5).associateWith { d ->
+            val daySlots = grid.grid[d] ?: emptyMap()
+            TimetableLayoutUtils.getMergedSlotsForDay(
+                daySlots = daySlots,
+                maxHours = totalHours,
+                mergeLessons = mergeLessons,
+                startHour = minHour
+            )
         }
     }
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val availableWidth = maxWidth
-        val totalFixedSpacing = Dimens.TimetableTimeColWidth + (Dimens.TimetableBlockGap * 7)
+        val availableHeight = maxHeight - 48.dp
 
+        val totalFixedSpacing = Dimens.TimetableTimeColWidth + (Dimens.TimetableBlockGap * 7)
         val fitColWidth = maxOf(30.dp, (availableWidth - totalFixedSpacing) / 5)
+
         val minColWidth = fitColWidth
         val defaultColWidth = maxOf(fitColWidth, Dimens.TimetableColWidth)
         val maxColWidth = maxOf(fitColWidth * 1.8f, 180.dp)
 
-        // Initialize from DataStore if present, otherwise default
-        var colWidthDp by rememberSaveable(savedColWidth) {
+        var colWidthDp by rememberSaveable {
             mutableFloatStateOf(savedColWidth ?: defaultColWidth.value)
         }
 
+        LaunchedEffect(savedColWidth) {
+            if (savedColWidth != null) {
+                colWidthDp = savedColWidth
+            }
+        }
+
         val currentColWidth = colWidthDp.dp.coerceIn(minColWidth, maxColWidth)
+
+        val baseHourHeight = remember(
+            availableHeight,
+            hoursCount,
+            breakMinutesMap,
+            scaleBreaks,
+            standardPeriodMinutes
+        ) {
+            val minGap = 4.dp
+            val minHourHeight = 38.dp
+            val breakCount = (minHour until totalHours).count()
+
+            if (!scaleBreaks) {
+                val totalFixedGaps = minGap * breakCount
+                val calculated = (availableHeight - totalFixedGaps) / hoursCount
+                if (calculated >= minHourHeight) calculated else minHourHeight
+            } else {
+                var fixedGapsCount = 0
+                var scaledRatioSum = 0f
+                for (h in minHour until totalHours) {
+                    val b = breakMinutesMap[h] ?: 0L
+                    if (b <= 0) fixedGapsCount++
+                    else scaledRatioSum += b.toFloat() / standardPeriodMinutes.toFloat()
+                }
+                val totalFixedGaps = minGap * fixedGapsCount
+                val totalScaleUnits = hoursCount.toFloat() + scaledRatioSum
+                val calculated = if (totalScaleUnits > 0f) {
+                    (availableHeight - totalFixedGaps) / totalScaleUnits
+                } else minHourHeight
+                if (calculated >= minHourHeight) calculated else minHourHeight
+            }
+        }
+
+        val liveYOffset = remember(nowTime, baseHourHeight, scaleBreaks) {
+            calculateCurrentTimeYOffset(
+                now = nowTime,
+                totalHours = totalHours,
+                classHours = classHours,
+                baseHourHeight = baseHourHeight,
+                scaleBreaks = scaleBreaks,
+                startHour = minHour,
+                periodDurationMinutes = standardPeriodMinutes
+            )
+        }
 
         val toggleFitScreen: () -> Unit = {
             scope.launch {
@@ -106,6 +169,7 @@ fun TimetableWeeklyGrid(
                     awaitEachGesture {
                         var prevDistance = 0f
                         var isZooming = false
+                        var didZoom = false
                         var lastPointers: List<PointerId> = emptyList()
 
                         do {
@@ -126,6 +190,7 @@ fun TimetableWeeklyGrid(
                                     val zoomFactor = currentDistance / prevDistance
                                     colWidthDp = (colWidthDp * zoomFactor).coerceIn(minColWidth.value, maxColWidth.value)
                                     prevDistance = currentDistance
+                                    didZoom = true
                                 }
                                 event.changes.forEach { it.consume() }
                             } else {
@@ -135,8 +200,9 @@ fun TimetableWeeklyGrid(
                             }
                         } while (event.changes.any { it.pressed })
 
-                        //save when gesture ends
-                        onColWidthChange(colWidthDp.coerceIn(minColWidth.value, maxColWidth.value))
+                        if (didZoom) {
+                            onColWidthChange(colWidthDp.coerceIn(minColWidth.value, maxColWidth.value))
+                        }
                     }
                 }
         ) {
@@ -153,145 +219,88 @@ fun TimetableWeeklyGrid(
                 color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
             )
 
-            BoxWithConstraints(
+            Box(
                 modifier = Modifier
                     .weight(1f)
+                    .fillMaxWidth()
                     .padding(vertical = Dimens.TimetableBlockGap)
+                    .verticalScroll(vScrollState)
             ) {
-                val minGap = 4.dp
-                val minHourHeight = 38.dp
-                val availableHeight = maxHeight - 1.dp
-
-                val (baseHourHeight) = remember(
-                    availableHeight,
-                    hoursCount,
-                    breakMinutesList,
-                    scaleBreaks,
-                    standardPeriodMinutes
-                ) {
-                    if (!scaleBreaks) {
-                        val totalFixedGaps = minGap * breakMinutesList.size
-                        val calculated = (availableHeight - totalFixedGaps) / hoursCount
-                        if (calculated >= minHourHeight) calculated to false else minHourHeight to true
-                    } else {
-                        var fixedGapsCount = 0
-                        var scaledRatioSum = 0f
-                        for (b in breakMinutesList) {
-                            if (b <= 0) {
-                                fixedGapsCount++
-                            } else {
-                                scaledRatioSum += b.toFloat() / standardPeriodMinutes.toFloat()
-                            }
-                        }
-                        val totalFixedGaps = minGap * fixedGapsCount
-                        val totalScaleUnits = hoursCount.toFloat() + scaledRatioSum
-                        val calculated = if (totalScaleUnits > 0f) {
-                            (availableHeight - totalFixedGaps) / totalScaleUnits
-                        } else minHourHeight
-
-                        if (calculated >= minHourHeight) calculated to false else minHourHeight to true
-                    }
-                }
-
-                val liveYOffset = remember(nowTime, baseHourHeight, scaleBreaks) {
-                    calculateCurrentTimeYOffset(
-                        now = nowTime,
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    TimetablePeriodColumn(
+                        startHour = minHour,
                         totalHours = totalHours,
                         classHours = classHours,
                         baseHourHeight = baseHourHeight,
                         scaleBreaks = scaleBreaks,
-                        startHour = minHour,
-                        periodDurationMinutes = standardPeriodMinutes
+                        periodDurationMinutes = standardPeriodMinutes,
+                        modifier = Modifier.width(Dimens.TimetableTimeColWidth)
                     )
-                }
 
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(vScrollState)
-                ) {
-                    Row(modifier = Modifier.fillMaxWidth()) {
-                        TimetablePeriodColumn(
-                            startHour = minHour,
-                            totalHours = totalHours,
-                            classHours = classHours,
-                            baseHourHeight = baseHourHeight,
-                            scaleBreaks = scaleBreaks,
-                            periodDurationMinutes = standardPeriodMinutes,
-                            modifier = Modifier.width(Dimens.TimetableTimeColWidth)
-                        )
+                    Spacer(modifier = Modifier.width(Dimens.TimetableBlockGap))
 
-                        Spacer(modifier = Modifier.width(Dimens.TimetableBlockGap))
+                    Box(modifier = Modifier.horizontalScroll(hScrollState)) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(Dimens.TimetableBlockGap)) {
+                            for (d in 1..5) {
+                                val mergedSlots = dayMergedSlots[d] ?: emptyList()
 
-                        Box(modifier = Modifier.horizontalScroll(hScrollState)) {
-                            Row(horizontalArrangement = Arrangement.spacedBy(Dimens.TimetableBlockGap)) {
-                                for (d in 1..5) {
-                                    val daySlots = grid.grid[d] ?: emptyMap()
-                                    val mergedSlots = TimetableLayoutUtils.getMergedSlotsForDay(
-                                        daySlots = daySlots,
-                                        maxHours = totalHours,
-                                        mergeLessons = mergeLessons,
-                                        startHour = minHour
-                                    )
+                                Column(modifier = Modifier.width(currentColWidth)) {
+                                    for (merged in mergedSlots) {
+                                        var blockHeight = baseHourHeight * merged.span
+                                        for (i in merged.startHour until (merged.startHour + merged.span - 1)) {
+                                            val breakMin = breakMinutesMap[i] ?: 0L
+                                            blockHeight += TimetableLayoutUtils.getBreakGapDp(
+                                                breakMinutes = breakMin,
+                                                scaleBreaks = scaleBreaks,
+                                                baseHourHeight = baseHourHeight,
+                                                periodDurationMinutes = standardPeriodMinutes
+                                            )
+                                        }
 
-                                    Column(modifier = Modifier.width(currentColWidth)) {
-                                        for (merged in mergedSlots) {
-                                            var blockHeight = baseHourHeight * merged.span
-                                            for (i in merged.startHour until (merged.startHour + merged.span - 1)) {
-                                                val breakMin = TimetableLayoutUtils.getBreakMinutesAfter(i, classHours)
-                                                blockHeight += TimetableLayoutUtils.getBreakGapDp(
-                                                    breakMinutes = breakMin,
-                                                    scaleBreaks = scaleBreaks,
-                                                    baseHourHeight = baseHourHeight,
-                                                    periodDurationMinutes = standardPeriodMinutes
-                                                )
-                                            }
-
-                                            Box(
-                                                modifier = Modifier
-                                                    .height(blockHeight)
-                                                    .fillMaxWidth()
-                                                    .clickable(enabled = merged.slot != null) {
-                                                        if (merged.slot != null) {
-                                                            onSlotClick(d, merged, merged.slot)
-                                                        }
+                                        Box(
+                                            modifier = Modifier
+                                                .height(blockHeight)
+                                                .fillMaxWidth()
+                                                .clickable(enabled = merged.slot != null) {
+                                                    if (merged.slot != null) {
+                                                        onSlotClick(d, merged, merged.slot)
                                                     }
-                                            ) {
-                                                if (merged.slot != null) {
-                                                    TimetableGridCell(
-                                                        slot = merged.slot,
-                                                        span = merged.span,
-                                                        isCompact = currentColWidth < 80.dp
-                                                    )
                                                 }
-                                            }
-
-                                            if (merged.endHour < totalHours) {
-                                                val breakMin = TimetableLayoutUtils.getBreakMinutesAfter(merged.endHour, classHours)
-                                                val breakGap = TimetableLayoutUtils.getBreakGapDp(
-                                                    breakMinutes = breakMin,
-                                                    scaleBreaks = scaleBreaks,
-                                                    baseHourHeight = baseHourHeight,
-                                                    periodDurationMinutes = standardPeriodMinutes
+                                        ) {
+                                            if (merged.slot != null) {
+                                                TimetableGridCell(
+                                                    slot = merged.slot,
+                                                    span = merged.span,
+                                                    isCompact = currentColWidth < 80.dp
                                                 )
-                                                Spacer(modifier = Modifier.height(breakGap))
                                             }
+                                        }
+
+                                        if (merged.endHour < totalHours) {
+                                            val breakMin = breakMinutesMap[merged.endHour] ?: 0L
+                                            val breakGap = TimetableLayoutUtils.getBreakGapDp(
+                                                breakMinutes = breakMin,
+                                                scaleBreaks = scaleBreaks,
+                                                baseHourHeight = baseHourHeight,
+                                                periodDurationMinutes = standardPeriodMinutes
+                                            )
+                                            Spacer(modifier = Modifier.height(breakGap))
                                         }
                                     }
                                 }
-                                Spacer(modifier = Modifier.width(Dimens.TimetableBlockGap))
                             }
+                            Spacer(modifier = Modifier.width(Dimens.TimetableBlockGap))
+                        }
 
-                            if (isCurrentWeek && liveYOffset != null) {
-                                LiveTimeIndicatorOverlay(
-                                    yOffset = liveYOffset,
-                                    currentDayIndex = currentDayIndex,
-                                    colWidth = currentColWidth,
-                                    blockGap = Dimens.TimetableBlockGap,
-                                    lineColor = dynamicPrimary,
-                                    modifier = Modifier.matchParentSize()
-                                )
-                            }
+                        if (isCurrentWeek && liveYOffset != null) {
+                            LiveTimeIndicatorOverlay(
+                                yOffset = liveYOffset,
+                                currentDayIndex = currentDayIndex,
+                                colWidth = currentColWidth,
+                                blockGap = Dimens.TimetableBlockGap,
+                                lineColor = dynamicPrimary,
+                                modifier = Modifier.matchParentSize()
+                            )
                         }
                     }
                 }
