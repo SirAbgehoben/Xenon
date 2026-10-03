@@ -114,7 +114,7 @@ fun TimetableGridCell(
                             }
 
                             val displayText = slot.substitution ?: if (slot.status != LessonStatus.CANCELLED) slot.course else null
-                            if (displayText != null) {
+                            if (!displayText.isNullOrBlank()) {
                                 // Insert zero-width break opportunity after hyphen
                                 val formattedText = remember(displayText) {
                                     displayText.replace("-", "-\u200B")
