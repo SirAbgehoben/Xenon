@@ -12,6 +12,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerId
 import androidx.compose.ui.input.pointer.pointerInput
@@ -234,7 +235,9 @@ fun TimetableWeeklyGrid(
                         baseHourHeight = baseHourHeight,
                         scaleBreaks = scaleBreaks,
                         periodDurationMinutes = standardPeriodMinutes,
-                        modifier = Modifier.width(Dimens.TimetableTimeColWidth)
+                        modifier = Modifier
+                            .width(Dimens.TimetableTimeColWidth)
+                            .graphicsLayer()
                     )
 
                     Spacer(modifier = Modifier.width(Dimens.TimetableBlockGap))
@@ -244,7 +247,11 @@ fun TimetableWeeklyGrid(
                             for (d in 1..5) {
                                 val mergedSlots = dayMergedSlots[d] ?: emptyList()
 
-                                Column(modifier = Modifier.width(currentColWidth)) {
+                                Column(
+                                    modifier = Modifier
+                                        .width(currentColWidth)
+                                        .graphicsLayer()
+                                ) {
                                     for (merged in mergedSlots) {
                                         var blockHeight = baseHourHeight * merged.span
                                         for (i in merged.startHour until (merged.startHour + merged.span - 1)) {
