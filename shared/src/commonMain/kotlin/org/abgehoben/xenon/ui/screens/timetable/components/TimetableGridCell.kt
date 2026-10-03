@@ -11,6 +11,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -98,26 +99,35 @@ fun TimetableGridCell(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             if (slot.status == LessonStatus.CANCELLED) {
+                                val cancelledText = stringResource(Res.string.cancelled_prefix, slot.course).replace("-", "-\u200B")
                                 Text(
-                                    text = stringResource(Res.string.cancelled_prefix, slot.course),
+                                    text = cancelledText,
                                     style = MaterialTheme.typography.labelSmall.copy(
                                         fontSize = if (isCompact) 7.5.sp else 8.5.sp,
+                                        lineHeight = if (isCompact) 8.5.sp else 9.5.sp,
                                         fontWeight = FontWeight.Bold
                                     ),
                                     color = MaterialTheme.colorScheme.error,
-                                    maxLines = 1,
+                                    maxLines = 2,
                                     overflow = TextOverflow.Ellipsis
                                 )
                             }
+
                             val displayText = slot.substitution ?: if (slot.status != LessonStatus.CANCELLED) slot.course else null
                             if (displayText != null) {
+                                // Insert zero-width break opportunity after hyphen
+                                val formattedText = remember(displayText) {
+                                    displayText.replace("-", "-\u200B")
+                                }
                                 Text(
-                                    text = displayText,
+                                    text = formattedText,
                                     style = MaterialTheme.typography.labelSmall.copy(
                                         fontSize = if (span >= 2) (if (isCompact) 10.sp else 11.sp) else (if (isCompact) 8.5.sp else 9.5.sp),
+                                        // Tighten line height so 2 lines fit comfortably in the slot height
+                                        lineHeight = if (span >= 2) (if (isCompact) 11.sp else 12.sp) else (if (isCompact) 9.5.sp else 10.5.sp),
                                         fontWeight = FontWeight.Black
                                     ),
-                                    maxLines = if (span >= 2) 2 else 1,
+                                    maxLines = if (span >= 2) 3 else 2,
                                     overflow = TextOverflow.Ellipsis,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
