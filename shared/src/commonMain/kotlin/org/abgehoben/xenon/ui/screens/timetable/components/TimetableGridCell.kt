@@ -159,17 +159,6 @@ fun TimetableGridCell(
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
-
-                            if (span >= 2 && !isCompact) {
-                                Text(
-                                    text = stringResource(Res.string.periods_count, span),
-                                    style = MaterialTheme.typography.labelSmall.copy(
-                                        fontSize = 8.5.sp,
-                                        fontWeight = FontWeight.Bold
-                                    ),
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                                )
-                            }
                         }
                     }
                 }
