@@ -1,9 +1,8 @@
 package org.abgehoben.xenon.ui.screens.timetable
 
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
+import androidx.compose.animation.*
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
@@ -29,6 +28,8 @@ import org.abgehoben.xenon.ui.screens.timetable.sheets.LessonDetailsBottomSheet
 import org.abgehoben.xenon.ui.screens.timetable.views.DailyListView
 import org.abgehoben.xenon.ui.screens.timetable.views.TimetableWeeklyGrid
 import org.abgehoben.xenon.ui.theme.Dimens
+import org.abgehoben.xenon.util.getIsoWeekNumber
+import org.abgehoben.xenon.util.now
 import org.koin.compose.viewmodel.koinViewModel
 import kotlinx.datetime.LocalDate
 import org.abgehoben.xenon.util.*
@@ -38,6 +39,7 @@ fun TimetableRoute(
     viewModel: TimetableViewModel = koinViewModel()
 ) {
     val timetableGrid by viewModel.timetableGrid.collectAsState()
+    val targetMonday by viewModel.targetMondayDate.collectAsState()
     val syncError by viewModel.syncError.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
     val viewMode by viewModel.timetableViewMode.collectAsState()
@@ -46,6 +48,7 @@ fun TimetableRoute(
 
     TimetableScreen(
         grid = timetableGrid,
+        targetMonday = targetMonday,
         syncError = syncError,
         isRefreshing = isRefreshing,
         viewMode = viewMode,
@@ -64,6 +67,7 @@ fun TimetableRoute(
 @Composable
 fun TimetableScreen(
     grid: TimetableGrid?,
+    targetMonday: LocalDate,
     syncError: String?,
     isRefreshing: Boolean,
     viewMode: TimetableViewMode,
@@ -89,9 +93,8 @@ fun TimetableScreen(
     val pagerState = rememberPagerState(initialPage = initialPage, pageCount = { 5 })
     val pullToRefreshState = rememberPullToRefreshState()
 
-    val calWeek = grid?.calWeek?.toString() ?: ""
-    val weekType = grid?.weekType ?: ""
-    val mondayDate = grid?.mondayDate ?: LocalDate.now()
+    val calWeek = remember(targetMonday) { targetMonday.getIsoWeekNumber().toString() }
+    val weekType = remember(targetMonday) { if (targetMonday.getIsoWeekNumber() % 2 == 0) "W2" else "W1" }
 
     Scaffold(
         contentWindowInsets = WindowInsets(
@@ -142,7 +145,22 @@ fun TimetableScreen(
             } else {
                 AnimatedContent(
                     targetState = viewMode,
-                    transitionSpec = { fadeIn() togetherWith fadeOut() },
+                    transitionSpec = {
+                        val enterTransition = fadeIn(
+                            animationSpec = tween(180, delayMillis = 30, easing = FastOutSlowInEasing)
+                        ) + scaleIn(
+                            initialScale = 0.95f,
+                            animationSpec = tween(180, delayMillis = 30, easing = FastOutSlowInEasing)
+                        )
+                        val exitTransition = fadeOut(
+                            animationSpec = tween(90)
+                        )
+
+                        (enterTransition togetherWith exitTransition).using(
+                            //disables layout size animation which caused measurement lag
+                            SizeTransform(clip = false)
+                        )
+                    },
                     label = "ViewModeTransition"
                 ) { mode ->
                     when (mode) {
@@ -164,7 +182,7 @@ fun TimetableScreen(
                             DailyListView(
                                 grid = grid,
                                 pagerState = pagerState,
-                                monday = mondayDate,
+                                monday = targetMonday,
                                 mergeLessons = userSettings.mergeLessons,
                                 scaleBreaks = userSettings.scaleBreaks,
                                 onTabSelected = { page -> scope.launch { pagerState.animateScrollToPage(page) } },
@@ -190,7 +208,7 @@ fun TimetableScreen(
                     mergedSlot = merged,
                     slot = slot,
                     classHours = grid?.classHours ?: emptyList(),
-                    mondayDate = mondayDate,
+                    mondayDate = targetMonday,
                     onDismiss = {
                         scope.launch { sheetState.hide() }.invokeOnCompletion {
                             selectedSlot = null
