@@ -6,6 +6,7 @@ import kotlinx.serialization.json.*
 import org.abgehoben.xenon.data.local.SessionManager
 import org.abgehoben.xenon.data.model.auth.UserRole
 import org.abgehoben.xenon.data.remote.SchulmanagerApi
+import kotlin.concurrent.Volatile
 
 class StudentResolver(
     private val api: SchulmanagerApi,
@@ -16,6 +17,9 @@ class StudentResolver(
         private const val TAG = "StudentResolver"
     }
 
+    // Cache the active student in-memory to prevent repeated JSON deserialization
+    @Volatile
+    private var cachedStudent: JsonObject? = null
 
     /**
      * Resolves the account role, extracts all student candidates, and saves
@@ -36,6 +40,7 @@ class StudentResolver(
 
             // 3. Persist active student if resolved
             if (activeStudent != null) {
+                cachedStudent = activeStudent
                 sessionManager.saveStudentData(activeStudent.toString())
                 AppLogger.d(TAG, "Resolved account: role=$role, studentId=${activeStudent["id"]}")
             }
@@ -51,12 +56,15 @@ class StudentResolver(
      * Resolves the active student payload for timetable requests (checks local cache first).
      */
     suspend fun resolveActiveStudent(token: String): JsonObject? {
-        val cached = runCatching {
+        cachedStudent?.let { return it }
+
+        val cachedFromStore = runCatching {
             sessionManager.studentData.firstOrNull()?.let { json.parseToJsonElement(it).jsonObject }
         }.getOrNull()
 
-        if (cached != null && cached["classId"] != null) {
-            return cached
+        if (cachedFromStore != null && cachedFromStore["classId"] != null) {
+            cachedStudent = cachedFromStore
+            return cachedFromStore
         }
 
         return resolveAndSync(token)
