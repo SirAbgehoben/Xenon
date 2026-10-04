@@ -1,7 +1,9 @@
 package org.abgehoben.xenon.data.model.calendar
 
+import androidx.compose.runtime.Immutable
 import kotlinx.datetime.LocalDate
 
+@Immutable
 data class ProcessedEvent(
     val title: String,
     val description: String,

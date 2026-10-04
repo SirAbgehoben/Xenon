@@ -1,8 +1,10 @@
 package org.abgehoben.xenon.data.model.timetable
 
+import androidx.compose.runtime.Immutable
 import org.abgehoben.xenon.data.remote.dto.timetable.ClassHour
 import kotlinx.datetime.LocalDate
 
+@Immutable
 data class TimetableGrid(
     val calWeek: Int,
     val weekType: String,

@@ -1,7 +1,9 @@
 package org.abgehoben.xenon.data.model.timetable
 
+import androidx.compose.runtime.Immutable
 import kotlinx.serialization.Serializable
 
+@Immutable
 @Serializable
 data class TimetableSlot(
     val course: String,
