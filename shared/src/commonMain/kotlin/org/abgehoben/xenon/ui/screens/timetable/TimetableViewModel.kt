@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
@@ -52,6 +53,19 @@ class TimetableViewModel(
 
     private val _weekOffset = MutableStateFlow(0)
     val weekOffset: StateFlow<Int> = _weekOffset
+
+    val targetMondayDate: StateFlow<LocalDate> = _weekOffset.map { offset ->
+        val today = LocalDate.now()
+        val baseMonday = today.minusDays(today.dayOfWeek.value.toLong() - 1)
+        baseMonday.plusWeeks(offset.toLong())
+    }.stateIn(
+        viewModelScope,
+        SharingStarted.Eagerly,
+        run {
+            val today = LocalDate.now()
+            today.minusDays(today.dayOfWeek.value.toLong() - 1)
+        }
+    )
 
     private val _timetableViewMode = MutableStateFlow(TimetableViewMode.WEEKLY)
     val timetableViewMode: StateFlow<TimetableViewMode> = _timetableViewMode
@@ -98,14 +112,14 @@ class TimetableViewModel(
     private fun loadCurrentTimetable(forceRefresh: Boolean = false) {
         currentJob?.cancel()
         currentJob = viewModelScope.launch(coroutineExceptionHandler) {
-            val token = sessionManager.jwtToken.firstOrNull() ?: return@launch
+            val token = sessionManager.cachedToken ?: sessionManager.jwtToken.firstOrNull() ?: return@launch
+            val targetMonday = targetMondayDate.value
+
             _isSyncing.value = true
             _syncError.value = null
 
             try {
                 withTimeout(TIMEOUT_MS.milliseconds) {
-                    val baseMonday = LocalDate.now().minusDays(LocalDate.now().dayOfWeek.value.toLong() - 1)
-                    val targetMonday = baseMonday.plusWeeks(_weekOffset.value.toLong())
                     val grid = timetableRepository.getFullTimetable(token, targetMonday, forceRefresh)
                     _timetableGrid.value = grid
                 }
@@ -113,9 +127,8 @@ class TimetableViewModel(
                 if (userSettings.value.preloadWeeks) {
                     launch {
                         try {
-                            val baseMonday = LocalDate.now().minusDays(LocalDate.now().dayOfWeek.value.toLong() - 1)
-                            timetableRepository.getFullTimetable(token, baseMonday.plusWeeks(1), false)
-                            timetableRepository.getFullTimetable(token, baseMonday.minusWeeks(1), false)
+                            timetableRepository.getFullTimetable(token, targetMonday.plusWeeks(1), false)
+                            timetableRepository.getFullTimetable(token, targetMonday.minusWeeks(1), false)
                         } catch (_: Throwable) {}
                     }
                 }
